@@ -96,8 +96,11 @@
                 <div class="text-[9px] text-slate-400 text-center mt-1">HOLD [SPACE] / TAP TO BOOST</div>
             </div>
 
-            <!-- Currency, Title & Audio Controls -->
+            <!-- Currency, Pause, Title & Audio Controls -->
             <div class="flex space-x-2 pointer-events-auto">
+                <button id="btnPauseGame" title="Pause Game" class="glass-panel w-12 h-12 rounded-2xl flex items-center justify-center text-xl text-amber-400 hover:text-amber-300 hover:border-amber-500/50 transition">
+                    <i class="fa-solid fa-pause"></i>
+                </button>
                 <button id="btnReturnToTitle" title="Return to Title Screen" class="glass-panel px-3.5 py-3 rounded-2xl flex items-center space-x-2 text-amber-400 hover:text-amber-300 hover:border-amber-500/50 transition">
                     <i class="fa-solid fa-house"></i>
                     <span class="font-game text-xs hidden sm:inline">TITLE</span>
@@ -119,7 +122,7 @@
 
         <div id="mobileControls" class="flex justify-between items-end w-full pointer-events-auto opacity-0 transition-opacity duration-300">
             <div class="text-slate-400 text-xs glass-panel p-3 rounded-xl max-w-xs hidden md:block">
-                <strong>Controls:</strong> Drag slingshot to aim & tell 'em to sod off! Press <strong>[SPACE]</strong> or tap <strong>BOOST</strong> in air!
+                <strong>Controls:</strong> Drag slingshot beyond minimum pull to aim! Press <strong>[SPACE]</strong> or tap <strong>BOOST</strong> in air!
             </div>
             <button id="btnMobileBoost" class="btn-action bg-gradient-to-r from-cyan-500 to-blue-600 w-24 h-24 rounded-full flex flex-col justify-center items-center font-game text-lg shadow-lg border-2 border-white/30 active:scale-95 transition">
                 <i class="fa-solid fa-bolt text-2xl mb-1"></i>
@@ -181,6 +184,30 @@
                 <span><i class="fa-solid fa-trophy text-amber-500/70 mr-1"></i> Best Escape: <strong id="menuBestDistance" class="text-slate-300">0 m</strong></span>
                 <span>•</span>
                 <span><i class="fa-solid fa-mug-hot text-yellow-500/70 mr-1"></i> Chill Points: <strong id="menuPeacePoints" class="text-slate-300">0</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAUSE MENU -->
+    <div id="pauseMenu" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl text-center border-amber-500/30 flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-3xl mb-3">
+                <i class="fa-solid fa-pause"></i>
+            </div>
+            <h2 class="text-3xl font-game text-amber-400 mb-5">GAME PAUSED</h2>
+            <div class="space-y-3 w-full">
+                <button id="btnResumeGame" class="btn-action w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-game text-xl py-3.5 rounded-2xl border border-amber-300/40 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>RESUME GAME</span>
+                </button>
+                <button id="btnRestartLevel" class="btn-action w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-lg py-3.5 rounded-2xl border border-slate-600 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right text-amber-400"></i>
+                    <span>RESTART LEVEL</span>
+                </button>
+                <button id="btnPauseReturnTitle" class="btn-action w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-game text-lg py-3.5 rounded-2xl border border-slate-600 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-house"></i>
+                    <span>TITLE SCREEN</span>
+                </button>
             </div>
         </div>
     </div>
@@ -401,8 +428,11 @@
                     <i id="btnNextIcon" class="fa-solid fa-forward"></i>
                     <span id="btnNextText">NEXT LEVEL</span>
                 </button>
-                <button id="btnShopFromResults" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-lg px-5 py-3.5 rounded-2xl border border-slate-600">
+                <button id="btnShopFromResults" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-lg px-5 py-3.5 rounded-2xl border border-slate-600" title="Upgrades">
                     <i class="fa-solid fa-shop text-amber-400"></i>
+                </button>
+                <button id="btnResultsReturnTitle" class="btn-action bg-slate-800 hover:bg-slate-700 text-amber-400 font-game text-lg px-5 py-3.5 rounded-2xl border border-slate-600 flex items-center justify-center space-x-2" title="Title Screen">
+                    <i class="fa-solid fa-house"></i>
                 </button>
             </div>
         </div>
@@ -415,6 +445,10 @@
                 this.muted = false;
                 this.musicInterval = null;
                 this.isMusicPlaying = false;
+                
+                this.footballMusic = new Audio('sigmamusicart-football-football-music-551346.mp3');
+                this.footballMusic.loop = true;
+                this.footballMusic.volume = 0.5;
             }
 
             init() {
@@ -432,9 +466,15 @@
                 this.init();
                 this.isMusicPlaying = true;
 
-                const notes = [220, 247.05, 277.18, 329.63, 369.99, 440];
-                let step = 0;
+                this.footballMusic.play().then(() => {
+                }).catch(e => {
+                    this.startSynthMusic();
+                });
+            }
 
+            startSynthMusic() {
+                if (this.musicInterval || this.muted) return;
+                const notes = [220, 247.05, 277.18, 329.63, 369.99, 440];
                 this.musicInterval = setInterval(() => {
                     if (!this.isMusicPlaying || this.muted || !this.ctx) return;
                     try {
@@ -451,14 +491,17 @@
                         gain.connect(this.ctx.destination);
                         osc.start();
                         osc.stop(this.ctx.currentTime + 0.4);
-                    } catch (e) {
-                        // Ignore audio context errors before user interaction
-                    }
+                    } catch (e) {}
                 }, 350);
             }
 
             stopTitleMusic() {
                 this.isMusicPlaying = false;
+                try {
+                    this.footballMusic.pause();
+                    this.footballMusic.currentTime = 0;
+                } catch(e) {}
+
                 if (this.musicInterval) {
                     clearInterval(this.musicInterval);
                     this.musicInterval = null;
@@ -638,16 +681,17 @@
             }
         }
 
-        // Gameplay Constants & States
         const STATE_MENU = 0;
         const STATE_AIMING = 1;
         const STATE_FLYING = 2;
         const STATE_ENDED = 3;
+        const STATE_PAUSED = 4;
 
         let gameState = STATE_MENU;
+        let previousGameState = STATE_AIMING;
 
         let viewportOffset = { x: 0, y: 0 };
-        let worldWidth = 500000;
+        let worldWidth = 300000000; 
         let groundY = 0;
 
         let player = {
@@ -678,6 +722,8 @@
             isDragging: false,
             maxPull: 130
         };
+
+        const minPullThreshold = 35;
 
         let obstacles = [];
         let powerups = [];
@@ -719,7 +765,7 @@
 
         function initWorld() {
             clouds = [];
-            for (let i = 0; i < 80; i++) {
+            for (let i = 0; i < 40; i++) {
                 clouds.push({
                     x: Math.random() * worldWidth,
                     y: Math.random() * (canvas.height * 0.7),
@@ -731,7 +777,10 @@
             obstacles = [];
             powerups = [];
 
-            for (let x = 1200; x < worldWidth; x += 700 + Math.random() * 800) {
+            // Optimized generation cap (200,000m) to prevent freezing/lag spikes on load
+            const maxGenX = launcher.x + (200000 * 6.5);
+
+            for (let x = 1200; x < maxGenX; x += 700 + Math.random() * 800) {
                 const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
                 obstacles.push({
                     x: x,
@@ -743,7 +792,7 @@
                 });
             }
 
-            for (let x = 1800; x < worldWidth; x += 1800 + Math.random() * 2200) {
+            for (let x = 1800; x < maxGenX; x += 1800 + Math.random() * 2200) {
                 const pType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
                 powerups.push({
                     x: x,
@@ -765,6 +814,7 @@
             document.getElementById('shopMenu').classList.add('hidden');
             document.getElementById('levelSelectMenu').classList.add('hidden');
             document.getElementById('gateLockMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
             document.getElementById('topHud').classList.add('opacity-0');
             document.getElementById('mobileControls').classList.add('opacity-0');
 
@@ -809,6 +859,7 @@
             document.getElementById('resultsMenu').classList.add('hidden');
             document.getElementById('shopMenu').classList.add('hidden');
             document.getElementById('levelSelectMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
             document.getElementById('topHud').classList.remove('opacity-0');
             document.getElementById('mobileControls').classList.remove('opacity-0');
 
@@ -883,7 +934,7 @@
             const dy = launcher.y - player.y;
             const pullDist = Math.hypot(dx, dy);
 
-            if (pullDist > 15) {
+            if (pullDist >= minPullThreshold) {
                 const launchPowerFactor = 0.22 + (upgrades.launchLvl * 0.012);
                 player.vx = dx * launchPowerFactor;
                 player.vy = dy * launchPowerFactor;
@@ -903,7 +954,39 @@
                     triggerBoost();
                     e.preventDefault();
                 }
+            } else if (e.code === 'Escape' || e.code === 'KeyP') {
+                if (gameState === STATE_FLYING || gameState === STATE_AIMING) {
+                    togglePause();
+                }
             }
+        });
+
+        function togglePause() {
+            if (gameState === STATE_FLYING || gameState === STATE_AIMING) {
+                previousGameState = gameState;
+                gameState = STATE_PAUSED;
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else if (gameState === STATE_PAUSED) {
+                document.getElementById('pauseMenu').classList.add('hidden');
+                gameState = previousGameState;
+            }
+        }
+
+        document.getElementById('btnPauseGame').addEventListener('click', togglePause);
+        document.getElementById('btnResumeGame').addEventListener('click', () => {
+            document.getElementById('pauseMenu').classList.add('hidden');
+            gameState = previousGameState;
+        });
+        document.getElementById('btnRestartLevel').addEventListener('click', () => {
+            document.getElementById('pauseMenu').classList.add('hidden');
+            startNewRun();
+        });
+        document.getElementById('btnPauseReturnTitle').addEventListener('click', () => {
+            document.getElementById('pauseMenu').classList.add('hidden');
+            returnToTitleScreen();
+        });
+        document.getElementById('btnResultsReturnTitle').addEventListener('click', () => {
+            returnToTitleScreen();
         });
 
         function triggerBoost() {
@@ -934,11 +1017,24 @@
         function updateGame() {
             if (gameState === STATE_FLYING) {
                 const gravity = 0.28;
-                const aeroFactor = 0.992 + (upgrades.aeroLvl * 0.0015);
+                let aeroFactor = 0.992 + (upgrades.aeroLvl * 0.0015);
 
                 player.vy += gravity;
                 player.vx *= aeroFactor;
                 player.vy *= aeroFactor;
+
+                if (player.distance >= 10000000) {
+                    const progress = Math.min(1, (player.distance - 10000000) / (200000000 - 10000000));
+                    const brakeFactor = 0.93 - (0.2 * progress);
+                    player.vx *= brakeFactor;
+                    player.vy *= brakeFactor;
+
+                    if (Math.abs(player.vx) < 0.2 && Math.abs(player.vy) < 0.2) {
+                        player.vx = 0;
+                        player.vy = 0;
+                        endRun();
+                    }
+                }
 
                 player.x += player.vx;
                 player.y += player.vy;
@@ -962,7 +1058,10 @@
                     if (player.airplaneTimer <= 0) player.airplaneMode = false;
                 }
 
-                if (player.y >= groundY - player.radius) {
+                const groundLimitWorldX = launcher.x + (100000 * 6.5);
+                const hasGround = player.x <= groundLimitWorldX;
+
+                if (hasGround && player.y >= groundY - player.radius) {
                     player.y = groundY - player.radius;
                     if (Math.abs(player.vy) > 2) {
                         const bounceRetention = 0.35 + (upgrades.bounceLvl * 0.012);
@@ -987,6 +1086,10 @@
                         if (Math.abs(player.vx) < 0.5) {
                             endRun();
                         }
+                    }
+                } else if (!hasGround && player.y >= groundY - player.radius) {
+                    if (Math.abs(player.vx) < 0.3 && Math.abs(player.vy) < 0.3) {
+                        endRun();
                     }
                 }
 
@@ -1209,10 +1312,13 @@
             groundGrad.addColorStop(0, '#065f46');
             groundGrad.addColorStop(1, '#022c22');
             ctx.fillStyle = groundGrad;
-            ctx.fillRect(-5000, groundY, worldWidth + 10000, canvas.height - groundY);
+            
+            const groundLimitWorldX = launcher.x + (100000 * 6.5);
+            const groundRenderWidth = groundLimitWorldX + 5000;
+            ctx.fillRect(-5000, groundY, groundRenderWidth, canvas.height - groundY);
 
             ctx.fillStyle = '#10b981';
-            ctx.fillRect(-5000, groundY, worldWidth + 10000, 16);
+            ctx.fillRect(-5000, groundY, groundRenderWidth, 16);
 
             if (currentMode === MODE_CAMPAIGN) {
                 const targetDist = getCampaignTargetDistance(stats.selectedCampaignLevel);
@@ -1248,7 +1354,8 @@
             ctx.lineTo(launcher.x + 5, launcher.y + 20);
             ctx.fill();
 
-            if (gameState === STATE_AIMING && launcher.isDragging) {
+            const currentPullDist = Math.hypot(launcher.x - player.x, launcher.y - player.y);
+            if (gameState === STATE_AIMING && launcher.isDragging && currentPullDist >= minPullThreshold) {
                 ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
                 ctx.lineWidth = 4;
                 ctx.setLineDash([8, 8]);
@@ -1288,7 +1395,6 @@
 
             obstacles.forEach(obs => {
                 if (!obs.active) return;
-                
                 const hoverY = Math.sin(Date.now() / 400 + obs.floatOffset) * 8;
                 
                 ctx.save();
@@ -1326,7 +1432,6 @@
 
             powerups.forEach(pw => {
                 if (!pw.active) return;
-                
                 const hoverY = Math.cos(Date.now() / 300 + pw.x) * 6;
                 
                 ctx.save();
@@ -1348,7 +1453,6 @@
                 ctx.fill();
                 
                 ctx.shadowBlur = 0;
-                
                 ctx.lineWidth = 3;
                 ctx.strokeStyle = '#ffffff';
                 ctx.stroke();
@@ -1557,7 +1661,9 @@
         }
 
         function gameLoop() {
-            updateGame();
+            if (gameState !== STATE_PAUSED) {
+                updateGame();
+            }
             drawGame();
             requestAnimationFrame(gameLoop);
         }
@@ -1757,12 +1863,10 @@
         setupUpgradeButton('btnBuyBounce', 'bounceLvl', 200);
         setupUpgradeButton('btnBuyAero', 'aeroLvl', 250);
 
-        // Return to title screen button
         document.getElementById('btnReturnToTitle').addEventListener('click', () => {
             returnToTitleScreen();
         });
 
-        // Copy Best Score button handler
         document.getElementById('btnCopyScore').addEventListener('click', () => {
             const scoreText = `MY BEST SCORE ON ANGRY SODS IS ${stats.bestDistance.toLocaleString()}m, CAN YOU BEAT IT?`;
             const textArea = document.createElement('textarea');
