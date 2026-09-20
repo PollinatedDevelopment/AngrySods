@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Angry Sods: Tell 'Em To Sod Off!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Outfit:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+
+        .font-game {
+            font-family: 'Fredoka One', cursive, sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .btn-action {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.6)); }
+            50% { filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.9)); }
+        }
+
+        .glow-title {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="w-screen h-screen relative flex flex-col justify-center items-center text-white select-none">
+
+    <canvas id="gameCanvas" class="absolute inset-0 z-0"></canvas>
+
+    <!-- UI Overlay Layer -->
+    <div id="uiOverlay" class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6">
+        
+        <div id="topHud" class="flex justify-between items-start w-full opacity-0 transition-opacity duration-300">
+            <!-- Mode & Distance Goal -->
+            <div class="glass-panel px-5 py-3 rounded-2xl flex items-center space-x-4 border-amber-500/30 pointer-events-auto">
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-amber-400 font-extrabold flex items-center">
+                        <span id="hudModeName">SOD OFF CAMPAIGN</span>
+                        <span id="hudLevelBadge" class="ml-2 bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30">LVL 1</span>
+                    </div>
+                    <div class="text-2xl md:text-3xl font-game text-amber-400">
+                        <span id="hudDistance">0</span> <span id="hudGoalContainer" class="text-slate-400 text-lg">/ <span id="hudGoalDistance">300</span>m</span>
+                    </div>
+                </div>
+                <div class="border-l border-slate-700 h-8"></div>
+                <div>
+                    <div class="text-xs uppercase tracking-wider text-slate-400 font-bold">Multiplier</div>
+                    <div class="text-xl md:text-2xl font-game text-emerald-400" id="hudMultiplier">1.0x</div>
+                </div>
+            </div>
+
+            <!-- Boost / Fuel Meter -->
+            <div class="glass-panel px-5 py-3 rounded-2xl flex flex-col w-44 md:w-60 border-cyan-500/30">
+                <div class="flex justify-between text-xs font-bold mb-1">
+                    <span class="text-cyan-400"><i class="fa-solid font-bold fa-fire-flame-curved mr-1"></i> ESPRESSO BOOST</span>
+                    <span id="hudBoostPercent" class="text-slate-300">100%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
+                    <div id="hudBoostBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded-full transition-all duration-75" style="width: 100%;"></div>
+                </div>
+                <div class="text-[9px] text-slate-400 text-center mt-1">HOLD [SPACE] / TAP TO BOOST</div>
+            </div>
+
+            <!-- Currency, Title & Audio Controls -->
+            <div class="flex space-x-2 pointer-events-auto">
+                <button id="btnReturnToTitle" title="Return to Title Screen" class="glass-panel px-3.5 py-3 rounded-2xl flex items-center space-x-2 text-amber-400 hover:text-amber-300 hover:border-amber-500/50 transition">
+                    <i class="fa-solid fa-house"></i>
+                    <span class="font-game text-xs hidden sm:inline">TITLE</span>
+                </button>
+                <div class="glass-panel px-4 py-3 rounded-2xl flex items-center space-x-2 border-yellow-500/30">
+                    <i class="fa-solid fa-mug-hot text-yellow-400 text-xl"></i>
+                    <span id="hudPeacePoints" class="font-game text-xl text-yellow-300">0</span>
+                </div>
+                <button id="btnAudioToggle" class="glass-panel w-12 h-12 rounded-2xl flex items-center justify-center text-xl text-slate-300 hover:text-white hover:border-white/40 transition">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="statusBanner" class="self-center glass-panel px-6 py-2 rounded-full border-indigo-500/50 flex items-center space-x-3 transform -translate-y-10 opacity-0 transition-all duration-300 pointer-events-none">
+            <i id="statusIcon" class="fa-solid fa-shield-halved text-2xl text-indigo-400"></i>
+            <span id="statusText" class="font-game text-lg tracking-wide text-indigo-200">SOD OFF ACTIVATED!</span>
+        </div>
+
+        <div id="mobileControls" class="flex justify-between items-end w-full pointer-events-auto opacity-0 transition-opacity duration-300">
+            <div class="text-slate-400 text-xs glass-panel p-3 rounded-xl max-w-xs hidden md:block">
+                <strong>Controls:</strong> Drag slingshot to aim & tell 'em to sod off! Press <strong>[SPACE]</strong> or tap <strong>BOOST</strong> in air!
+            </div>
+            <button id="btnMobileBoost" class="btn-action bg-gradient-to-r from-cyan-500 to-blue-600 w-24 h-24 rounded-full flex flex-col justify-center items-center font-game text-lg shadow-lg border-2 border-white/30 active:scale-95 transition">
+                <i class="fa-solid fa-bolt text-2xl mb-1"></i>
+                <span>BOOST</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- START MENU -->
+    <div id="startMenu" class="absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-panel max-w-xl w-full p-6 md:p-8 rounded-3xl text-center border-amber-500/30 flex flex-col items-center">
+            <div class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/40 px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase mb-3">
+                Tell Modern Life Annoyances To Sod Off!
+            </div>
+            <h1 class="text-4xl md:text-6xl font-game text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 glow-title mb-2">
+                ANGRY SODS
+            </h1>
+            <p class="text-slate-300 text-sm md:text-base max-w-md mb-5">
+                Launch across 1,000 campaign levels or smash infinite records in Sod Off mode!
+            </p>
+
+            <!-- Mode Selection Tabs -->
+            <div class="w-full grid grid-cols-2 gap-3 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 mb-6">
+                <button id="btnSelectCampaign" class="py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>SOD OFF CAMPAIGN</span>
+                </button>
+                <button id="btnSelectInfinite" class="py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-infinity"></i>
+                    <span>INFINITE SOD OFF</span>
+                </button>
+            </div>
+
+            <!-- Campaign Level Info Panel -->
+            <div id="campaignInfoBox" class="w-full bg-slate-900/60 p-4 rounded-2xl border border-slate-800 mb-6 text-left flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-amber-400 font-extrabold uppercase">Campaign Escape Level</div>
+                    <div class="text-xl font-game text-slate-100" id="menuCampaignLevel">LEVEL 1</div>
+                    <div class="text-xs text-slate-400">Target Sod Off Distance: <span id="menuCampaignTarget" class="text-amber-300 font-semibold">300m</span></div>
+                </div>
+                <button id="btnOpenLevelSelector" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-list-check text-amber-400"></i>
+                    <span>SELECT LEVEL</span>
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full">
+                <button id="btnStartGame" class="btn-action flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-game text-xl py-4 rounded-2xl border border-amber-300/40 shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span id="btnStartText">START LEVEL 1</span>
+                </button>
+                <button id="btnOpenShop" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-lg px-6 py-4 rounded-2xl border border-slate-600 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-shop text-amber-400"></i>
+                    <span>UPGRADES</span>
+                </button>
+            </div>
+
+            <div class="mt-5 text-xs text-slate-500 flex items-center space-x-4">
+                <span><i class="fa-solid fa-trophy text-amber-500/70 mr-1"></i> Best Escape: <strong id="menuBestDistance" class="text-slate-300">0 m</strong></span>
+                <span>•</span>
+                <span><i class="fa-solid fa-mug-hot text-yellow-500/70 mr-1"></i> Chill Points: <strong id="menuPeacePoints" class="text-slate-300">0</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL SELECT MENU -->
+    <div id="levelSelectMenu" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-3xl w-full p-6 rounded-3xl border-slate-700 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <i class="fa-solid fa-list-check text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-game text-amber-400">CAMPAIGN LEVELS (1 - 1000)</h2>
+                        <p class="text-xs text-slate-400">Milestone levels (every 10 levels) require upgraded gear to tell them to sod off!</p>
+                    </div>
+                </div>
+                <button id="btnCloseLevelSelector" class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Level Grid -->
+            <div id="levelGrid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 overflow-y-auto pr-1 my-2 flex-1">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="pt-3 mt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                <div class="flex items-center space-x-3">
+                    <span><i class="fa-solid fa-lock text-red-400 mr-1"></i> Milestone Gate Lock</span>
+                    <span><i class="fa-solid fa-check-double text-emerald-400 mr-1"></i> Sodded Off Successfully</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GATE LOCK MENU -->
+    <div id="gateLockMenu" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl text-center border-red-500/40 flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 text-3xl mb-3 animate-bounce">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+
+            <h2 class="text-2xl font-game text-red-400 mb-1">MILESTONE GATE LOCKED!</h2>
+            <p id="gateLockText" class="text-slate-300 text-sm mb-5">
+                Level <span id="gateLevelNum" class="font-bold text-amber-400">10</span> requires a <strong>Total Upgrade Sum</strong> of at least <span id="gateReqLvl" class="font-bold text-cyan-400">6</span>!
+            </p>
+
+            <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 w-full text-left space-y-2 text-xs mb-6">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Your Current Upgrade Sum:</span>
+                    <span id="gateCurrentUpgrades" class="font-bold text-amber-300">4 / 6</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Required Milestone Sum:</span>
+                    <span id="gateRequiredUpgrades" class="font-bold text-cyan-400">Level 6</span>
+                </div>
+            </div>
+
+            <div class="flex space-x-3 w-full">
+                <button id="btnGateGoShop" class="btn-action flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-game py-3.5 rounded-xl border border-amber-300/40 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-shop"></i>
+                    <span>GO TO SHOP</span>
+                </button>
+                <button id="btnGateClose" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-game px-5 py-3.5 rounded-xl border border-slate-600">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHOP MENU -->
+    <div id="shopMenu" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-2xl w-full p-6 rounded-3xl border-slate-700 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <i class="fa-solid fa-store text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-game text-amber-400">SOD OFF UPGRADES</h2>
+                        <p class="text-xs text-slate-400">Total Upgrades Sum: <span id="shopTotalUpgradeSum" class="text-amber-300 font-bold">4</span></p>
+                    </div>
+                </div>
+                <div class="flex items-center bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-xl">
+                    <i class="fa-solid fa-mug-hot text-yellow-400 mr-2"></i>
+                    <span id="shopPeacePoints" class="font-game text-yellow-300 text-lg">0</span>
+                </div>
+            </div>
+
+            <!-- Upgrades List -->
+            <div class="space-y-3 overflow-y-auto pr-1 my-2 flex-1 text-left">
+                <!-- Upgrade 1 -->
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 text-xl">
+                            <i class="fa-solid fa-catapult fa-flip-horizontal"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-200">Heavy-Duty Sod-Off Slingshot</div>
+                            <div class="text-xs text-slate-400">Increases initial launch velocity to send annoyances packing</div>
+                            <div class="text-xs font-semibold text-orange-400 mt-1">Lvl <span id="lvlLaunch">1</span> / 100</div>
+                        </div>
+                    </div>
+                    <button id="btnBuyLaunch" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
+                        <span>Upgrade</span>
+                        <span id="costLaunch" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">100</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade 2 -->
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl">
+                            <i class="fa-solid fa-fire-flame-curved"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-200">Triple-Shot Espresso Jetpack</div>
+                            <div class="text-xs text-slate-400">Increases coffee boost fuel capacity & mid-air thrust</div>
+                            <div class="text-xs font-semibold text-cyan-400 mt-1">Lvl <span id="lvlBoost">1</span> / 100</div>
+                        </div>
+                    </div>
+                    <button id="btnBuyBoost" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
+                        <span>Upgrade</span>
+                        <span id="costBoost" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">150</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade 3 -->
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl">
+                            <i class="fa-solid fa-ghost"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-200">Anti-Anxiety Bouncy Cushion</div>
+                            <div class="text-xs text-slate-400">Retains maximum momentum when bouncing off ground</div>
+                            <div class="text-xs font-semibold text-emerald-400 mt-1">Lvl <span id="lvlBounce">1</span> / 100</div>
+                        </div>
+                    </div>
+                    <button id="btnBuyBounce" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
+                        <span>Upgrade</span>
+                        <span id="costBounce" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">200</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade 4 -->
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl">
+                            <i class="fa-solid fa-wind"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-200">Bulletproof Business Suit</div>
+                            <div class="text-xs text-slate-400">Reduces air resistance & glides past annoying meetings</div>
+                            <div class="text-xs font-semibold text-purple-400 mt-1">Lvl <span id="lvlAero">1</span> / 100</div>
+                        </div>
+                    </div>
+                    <button id="btnBuyAero" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
+                        <span>Upgrade</span>
+                        <span id="costAero" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">250</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-3 mt-2 border-t border-slate-800 flex justify-end">
+                <button id="btnCloseShop" class="btn-action bg-slate-700 hover:bg-slate-600 text-white font-game px-6 py-2.5 rounded-xl text-base">
+                    BACK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS MENU -->
+    <div id="resultsMenu" class="absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-lg w-full p-6 md:p-8 rounded-3xl text-center border-emerald-500/30 flex flex-col items-center">
+            <div id="resIconBg" class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl mb-3">
+                <i id="resIcon" class="fa-solid fa-umbrella-beach"></i>
+            </div>
+
+            <h2 id="resultTitle" class="text-3xl font-game text-amber-400 mb-1">SOD OFF SUCCESSFUL!</h2>
+            <p id="resultSubtitle" class="text-slate-400 text-sm mb-5">Modern life annoyance successfully told to sod off.</p>
+
+            <div class="w-full bg-slate-900/80 rounded-2xl border border-slate-800 p-4 space-y-3 mb-6 text-left">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Sod Off Distance:</span>
+                    <span class="font-game text-2xl text-amber-400"><span id="resDistance">0</span> m</span>
+                </div>
+                <div id="resGoalRow" class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Level Goal Required:</span>
+                    <span class="font-semibold text-slate-200"><span id="resTargetDistance">300</span> m</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Annoyances Smashing:</span>
+                    <span class="font-semibold text-slate-200" id="resObstacles">0</span>
+                </div>
+                <div class="border-t border-slate-800 pt-2 flex justify-between items-center">
+                    <span class="text-slate-300 font-bold text-sm">Chill Points Earned:</span>
+                    <span class="font-game text-xl text-yellow-400 flex items-center">
+                        <i class="fa-solid fa-mug-hot text-sm mr-1.5"></i>
+                        +<span id="resPoints">0</span>
+                    </span>
+                </div>
+            </div>
+
+            <div id="newHighscoreBadge" class="hidden bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs px-4 py-1.5 rounded-full mb-4 tracking-widest uppercase animate-bounce">
+                🎉 NEW PERSONAL BEST! 🎉
+            </div>
+
+            <!-- Copy Best Score Button -->
+            <button id="btnCopyScore" class="btn-action w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 font-game text-sm py-3 rounded-xl border border-cyan-500/30 flex items-center justify-center space-x-2 mb-5">
+                <i class="fa-solid fa-copy"></i>
+                <span id="copyScoreText">COPY BEST SCORE TO CLIPBOARD</span>
+            </button>
+
+            <div class="flex space-x-3 w-full">
+                <button id="btnNextOrRetry" class="btn-action flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-game text-xl py-3.5 rounded-2xl border border-emerald-300/40 flex items-center justify-center space-x-2">
+                    <i id="btnNextIcon" class="fa-solid fa-forward"></i>
+                    <span id="btnNextText">NEXT LEVEL</span>
+                </button>
+                <button id="btnShopFromResults" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-lg px-5 py-3.5 rounded-2xl border border-slate-600">
+                    <i class="fa-solid fa-shop text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AudioController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.musicInterval = null;
+                this.isMusicPlaying = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            startTitleMusic() {
+                if (this.isMusicPlaying || this.muted) return;
+                this.init();
+                this.isMusicPlaying = true;
+
+                const notes = [220, 247.05, 277.18, 329.63, 369.99, 440];
+                let step = 0;
+
+                this.musicInterval = setInterval(() => {
+                    if (!this.isMusicPlaying || this.muted || !this.ctx) return;
+                    try {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        const freq = notes[Math.floor(Math.random() * notes.length)];
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        
+                        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.4);
+                    } catch (e) {
+                        // Ignore audio context errors before user interaction
+                    }
+                }, 350);
+            }
+
+            stopTitleMusic() {
+                this.isMusicPlaying = false;
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+
+            playStartJingle() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const chord = [300, 450, 600, 900];
+                chord.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + (idx * 0.08));
+                    gain.gain.setValueAtTime(0.2, now + (idx * 0.08));
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.08) + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + (idx * 0.08));
+                    osc.stop(now + (idx * 0.08) + 0.25);
+                });
+            }
+
+            playFinishJingle(success) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const melody = success ? [440, 554.37, 659.25, 880] : [350, 300, 250, 180];
+                melody.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = success ? 'triangle' : 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + (idx * 0.12));
+                    gain.gain.setValueAtTime(0.25, now + (idx * 0.12));
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.12) + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + (idx * 0.12));
+                    osc.stop(now + (idx * 0.12) + 0.3);
+                });
+            }
+
+            playLaunch() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playBounce() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(350, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playHitObstacle() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playPowerup() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(600, now + 0.08);
+                osc.frequency.setValueAtTime(850, now + 0.16);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+
+            playBoost() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100 + Math.random() * 50, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+        }
+
+        const audio = new AudioController();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const MODE_CAMPAIGN = 'CAMPAIGN';
+        const MODE_INFINITE = 'INFINITE';
+        let currentMode = MODE_CAMPAIGN;
+
+        let upgrades = {
+            launchLvl: 1,
+            boostLvl: 1,
+            bounceLvl: 1,
+            aeroLvl: 1
+        };
+
+        let stats = {
+            peacePoints: 0,
+            bestDistance: 0,
+            unlockedCampaignLevel: 1,
+            selectedCampaignLevel: 1
+        };
+
+        function getRequiredUpgradeSumForLevel(lvl) {
+            if (lvl < 10) return 4;
+            const milestoneIndex = Math.floor(lvl / 10);
+            return 4 + (milestoneIndex * 2);
+        }
+
+        function getTotalUpgradeSum() {
+            return upgrades.launchLvl + upgrades.boostLvl + upgrades.bounceLvl + upgrades.aeroLvl;
+        }
+
+        function getCampaignTargetDistance(lvl) {
+            return Math.floor(250 + (lvl * 350));
+        }
+
+        function loadSavedData() {
+            try {
+                const savedUpgrades = localStorage.getItem('sod_off_upgrades');
+                if (savedUpgrades) upgrades = JSON.parse(savedUpgrades);
+
+                const savedStats = localStorage.getItem('sod_off_stats');
+                if (savedStats) stats = JSON.parse(savedStats);
+            } catch (e) {
+                console.error("Could not load save data", e);
+            }
+            updateShopUI();
+            updateMenuUI();
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('sod_off_upgrades', JSON.stringify(upgrades));
+                localStorage.setItem('sod_off_stats', JSON.stringify(stats));
+            } catch (e) {
+                console.error("Could not save data", e);
+            }
+        }
+
+        // Gameplay Constants & States
+        const STATE_MENU = 0;
+        const STATE_AIMING = 1;
+        const STATE_FLYING = 2;
+        const STATE_ENDED = 3;
+
+        let gameState = STATE_MENU;
+
+        let viewportOffset = { x: 0, y: 0 };
+        let worldWidth = 500000;
+        let groundY = 0;
+
+        let player = {
+            x: 150,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            radius: 24,
+            rotation: 0,
+            vRot: 0,
+            fuel: 100,
+            maxFuel: 100,
+            hasShield: false,
+            shieldTimer: 0,
+            airplaneMode: false,
+            airplaneTimer: 0,
+            multiplier: 1.0,
+            distance: 0,
+            maxHeight: 0,
+            smashedObstacles: 0
+        };
+
+        let launcher = {
+            x: 150,
+            y: 0,
+            dragX: 150,
+            dragY: 0,
+            isDragging: false,
+            maxPull: 130
+        };
+
+        let obstacles = [];
+        let powerups = [];
+        let particles = [];
+        let clouds = [];
+
+        const OBSTACLE_TYPES = [
+            { name: "Sod off, Spam Call!", icon: "\uf879", color: "#ef4444", radius: 26, drag: 0.6 },
+            { name: "Sod off, Micromanager!", icon: "\uf508", color: "#f97316", radius: 30, drag: 0.8 },
+            { name: "Sod off, Emergency Meeting!", icon: "\uf073", color: "#eab308", radius: 28, drag: 0.7 },
+            { name: "Sod off, Reply-All Email!", icon: "\uf0e0", color: "#a855f7", radius: 24, drag: 0.5 },
+            { name: "Sod off, Loud Alarm Clock!", icon: "\uf017", color: "#ec4899", radius: 22, drag: 0.4 }
+        ];
+
+        const POWERUP_TYPES = [
+            { type: "DND", name: "Do Not Disturb Shield", icon: "\uf3ed", color: "#3b82f6" },
+            { type: "COFFEE", name: "Espresso Fuel Refill", icon: "\uf0f4", color: "#eab308" },
+            { type: "AIRPLANE", name: "Sod Off Airplane Mode", icon: "\uf072", color: "#06b6d4" },
+            { type: "HEADPHONES", name: "Noise Cancelling", icon: "\uf025", color: "#10b981" }
+        ];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            groundY = canvas.height - 100;
+
+            launcher.y = groundY - 140;
+            launcher.dragY = launcher.y;
+            
+            if (gameState === STATE_MENU || gameState === STATE_AIMING) {
+                player.x = launcher.x;
+                player.y = launcher.y;
+                viewportOffset.x = 0;
+                viewportOffset.y = 0;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function initWorld() {
+            clouds = [];
+            for (let i = 0; i < 80; i++) {
+                clouds.push({
+                    x: Math.random() * worldWidth,
+                    y: Math.random() * (canvas.height * 0.7),
+                    size: 40 + Math.random() * 90,
+                    speed: 0.2 + Math.random() * 0.5
+                });
+            }
+
+            obstacles = [];
+            powerups = [];
+
+            for (let x = 1200; x < worldWidth; x += 700 + Math.random() * 800) {
+                const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+                obstacles.push({
+                    x: x,
+                    y: groundY - 40 - Math.random() * (canvas.height * 0.65),
+                    type: type,
+                    radius: type.radius,
+                    active: true,
+                    floatOffset: Math.random() * Math.PI * 2
+                });
+            }
+
+            for (let x = 1800; x < worldWidth; x += 1800 + Math.random() * 2200) {
+                const pType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+                powerups.push({
+                    x: x,
+                    y: groundY - 60 - Math.random() * (canvas.height * 0.5),
+                    config: pType,
+                    radius: 20,
+                    active: true
+                });
+            }
+        }
+
+        function returnToTitleScreen() {
+            audio.stopTitleMusic();
+            audio.startTitleMusic();
+            gameState = STATE_MENU;
+
+            document.getElementById('startMenu').classList.remove('hidden');
+            document.getElementById('resultsMenu').classList.add('hidden');
+            document.getElementById('shopMenu').classList.add('hidden');
+            document.getElementById('levelSelectMenu').classList.add('hidden');
+            document.getElementById('gateLockMenu').classList.add('hidden');
+            document.getElementById('topHud').classList.add('opacity-0');
+            document.getElementById('mobileControls').classList.add('opacity-0');
+
+            player.x = launcher.x;
+            player.y = launcher.y;
+            viewportOffset.x = 0;
+            viewportOffset.y = 0;
+            updateMenuUI();
+        }
+
+        function startNewRun() {
+            audio.init();
+            audio.stopTitleMusic();
+            audio.playStartJingle();
+            gameState = STATE_AIMING;
+
+            viewportOffset.x = 0;
+            viewportOffset.y = 0;
+
+            player.x = launcher.x;
+            player.y = launcher.y;
+            player.vx = 0;
+            player.vy = 0;
+            player.rotation = 0;
+            player.vRot = 0;
+            player.maxFuel = 100 + (upgrades.boostLvl * 25);
+            player.fuel = player.maxFuel;
+            player.hasShield = false;
+            player.shieldTimer = 0;
+            player.airplaneMode = false;
+            player.airplaneTimer = 0;
+            player.multiplier = 1.0;
+            player.distance = 0;
+            player.maxHeight = 0;
+            player.smashedObstacles = 0;
+
+            launcher.dragX = launcher.x;
+            launcher.dragY = launcher.y;
+            launcher.isDragging = false;
+
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('resultsMenu').classList.add('hidden');
+            document.getElementById('shopMenu').classList.add('hidden');
+            document.getElementById('levelSelectMenu').classList.add('hidden');
+            document.getElementById('topHud').classList.remove('opacity-0');
+            document.getElementById('mobileControls').classList.remove('opacity-0');
+
+            updateHud();
+        }
+
+        function getCanvasPoint(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        canvas.addEventListener('mousedown', onPointerDown);
+        canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+
+        canvas.addEventListener('mousemove', onPointerMove);
+        canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+
+        canvas.addEventListener('mouseup', onPointerUp);
+        canvas.addEventListener('touchend', onPointerUp);
+
+        function onPointerDown(e) {
+            if (gameState === STATE_MENU) {
+                audio.init();
+                audio.startTitleMusic();
+            }
+            if (gameState !== STATE_AIMING) return;
+            const pt = getCanvasPoint(e);
+            const dist = Math.hypot(pt.x - (launcher.x - viewportOffset.x), pt.y - (launcher.y - viewportOffset.y));
+            if (dist < 70) {
+                launcher.isDragging = true;
+                audio.init();
+            }
+        }
+
+        function onPointerMove(e) {
+            if (gameState !== STATE_AIMING || !launcher.isDragging) return;
+            if (e.cancelable) e.preventDefault();
+            const pt = getCanvasPoint(e);
+            
+            const worldPtX = pt.x + viewportOffset.x;
+            const worldPtY = pt.y + viewportOffset.y;
+
+            const dx = worldPtX - launcher.x;
+            const dy = worldPtY - launcher.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > launcher.maxPull) {
+                launcher.dragX = launcher.x + (dx / dist) * launcher.maxPull;
+                launcher.dragY = launcher.y + (dy / dist) * launcher.maxPull;
+            } else {
+                launcher.dragX = worldPtX;
+                launcher.dragY = worldPtY;
+            }
+
+            if (launcher.dragX > launcher.x) launcher.dragX = launcher.x;
+            if (launcher.dragY > groundY - player.radius) launcher.dragY = groundY - player.radius;
+
+            player.x = launcher.dragX;
+            player.y = launcher.dragY;
+        }
+
+        function onPointerUp(e) {
+            if (gameState !== STATE_AIMING || !launcher.isDragging) return;
+            launcher.isDragging = false;
+
+            const dx = launcher.x - player.x;
+            const dy = launcher.y - player.y;
+            const pullDist = Math.hypot(dx, dy);
+
+            if (pullDist > 15) {
+                const launchPowerFactor = 0.22 + (upgrades.launchLvl * 0.012);
+                player.vx = dx * launchPowerFactor;
+                player.vy = dy * launchPowerFactor;
+                audio.playLaunch();
+                gameState = STATE_FLYING;
+            } else {
+                player.x = launcher.x;
+                player.y = launcher.y;
+            }
+        }
+
+        const btnBoost = document.getElementById('btnMobileBoost');
+        btnBoost.addEventListener('click', triggerBoost);
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (gameState === STATE_FLYING) {
+                    triggerBoost();
+                    e.preventDefault();
+                }
+            }
+        });
+
+        function triggerBoost() {
+            if (gameState !== STATE_FLYING || player.fuel <= 0) return;
+            const boostCost = 22;
+            if (player.fuel >= boostCost) {
+                player.fuel -= boostCost;
+                updateHud();
+                const boostPower = 12 + (upgrades.boostLvl * 0.8);
+                player.vx += boostPower;
+                player.vy -= boostPower * 0.5;
+                audio.playBoost();
+
+                for (let i = 0; i < 8; i++) {
+                    particles.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: -5 - Math.random() * 6,
+                        vy: (Math.random() - 0.5) * 4,
+                        color: '#06b6d4',
+                        size: 4 + Math.random() * 5,
+                        life: 25
+                    });
+                }
+            }
+        }
+
+        function updateGame() {
+            if (gameState === STATE_FLYING) {
+                const gravity = 0.28;
+                const aeroFactor = 0.992 + (upgrades.aeroLvl * 0.0015);
+
+                player.vy += gravity;
+                player.vx *= aeroFactor;
+                player.vy *= aeroFactor;
+
+                player.x += player.vx;
+                player.y += player.vy;
+
+                player.vRot = player.vx * 0.005;
+                player.rotation += player.vRot;
+
+                player.distance = Math.max(0, Math.floor((player.x - launcher.x) / 6.5));
+                const currentHeight = Math.max(0, Math.floor(groundY - player.y));
+                player.maxHeight = Math.max(player.maxHeight, currentHeight);
+
+                updateHud();
+
+                if (player.hasShield) {
+                    player.shieldTimer--;
+                    if (player.shieldTimer <= 0) player.hasShield = false;
+                }
+                if (player.airplaneMode) {
+                    player.airplaneTimer--;
+                    player.vy *= 0.85;
+                    if (player.airplaneTimer <= 0) player.airplaneMode = false;
+                }
+
+                if (player.y >= groundY - player.radius) {
+                    player.y = groundY - player.radius;
+                    if (Math.abs(player.vy) > 2) {
+                        const bounceRetention = 0.35 + (upgrades.bounceLvl * 0.012);
+                        player.vy = -player.vy * bounceRetention;
+                        player.vx *= 0.82;
+                        audio.playBounce();
+
+                        for (let i = 0; i < 12; i++) {
+                            particles.push({
+                                x: player.x + (Math.random() - 0.5) * 30,
+                                y: groundY,
+                                vx: (Math.random() - 0.5) * 6,
+                                vy: -Math.random() * 4,
+                                color: '#94a3b8',
+                                size: 3 + Math.random() * 6,
+                                life: 30
+                            });
+                        }
+                    } else {
+                        player.vy = 0;
+                        player.vx *= 0.92;
+                        if (Math.abs(player.vx) < 0.5) {
+                            endRun();
+                        }
+                    }
+                }
+
+                const targetViewportX = player.x - canvas.width * 0.3;
+                viewportOffset.x += (targetViewportX - viewportOffset.x) * 0.1;
+                viewportOffset.x = Math.max(0, viewportOffset.x);
+
+                obstacles.forEach(obs => {
+                    if (!obs.active) return;
+                    const dist = Math.hypot(player.x - obs.x, player.y - obs.y);
+                    if (dist < player.radius + obs.radius) {
+                        if (player.hasShield || player.airplaneMode) {
+                            obs.active = false;
+                            player.smashedObstacles++;
+                            player.vx += 4;
+                            audio.playHitObstacle();
+                        } else {
+                            obs.active = false;
+                            player.smashedObstacles++;
+                            player.vx *= 0.5;
+                            player.vy -= 4;
+                            audio.playHitObstacle();
+
+                            for (let i = 0; i < 15; i++) {
+                                particles.push({
+                                    x: obs.x,
+                                    y: obs.y,
+                                    vx: (Math.random() - 0.5) * 10,
+                                    vy: (Math.random() - 0.5) * 10,
+                                    color: obs.type.color,
+                                    size: 4 + Math.random() * 6,
+                                    life: 35
+                                });
+                            }
+                        }
+                    }
+                });
+
+                powerups.forEach(pw => {
+                    if (!pw.active) return;
+                    const dist = Math.hypot(player.x - pw.x, player.y - pw.y);
+                    if (dist < player.radius + pw.radius) {
+                        pw.active = false;
+                        audio.playPowerup();
+
+                        if (pw.config.type === 'DND') {
+                            player.hasShield = true;
+                            player.shieldTimer = 350;
+                            showStatusBanner("DO NOT DISTURB SHIELD!", "\uf3ed", "#3b82f6");
+                        } else if (pw.config.type === 'COFFEE') {
+                            player.fuel = Math.min(player.maxFuel, player.fuel + 60);
+                            updateHud();
+                            showStatusBanner("ESPRESSO REFILL!", "\uf0f4", "#eab308");
+                        } else if (pw.config.type === 'AIRPLANE') {
+                            player.airplaneMode = true;
+                            player.airplaneTimer = 300;
+                            showStatusBanner("SOD OFF AIRPLANE MODE!", "\uf072", "#06b6d4");
+                        } else if (pw.config.type === 'HEADPHONES') {
+                            player.multiplier += 0.5;
+                            showStatusBanner("NOISE CANCELLING BOOST!", "\uf025", "#10b981");
+                        }
+                    }
+                });
+            }
+
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+        }
+
+        function showStatusBanner(text, iconClass, colorHex) {
+            const banner = document.getElementById('statusBanner');
+            const icon = document.getElementById('statusIcon');
+            const txt = document.getElementById('statusText');
+
+            icon.className = `fa-solid ${iconClass} text-2xl`;
+            icon.style.color = colorHex;
+            txt.textContent = text;
+            banner.style.transform = 'translateY(0)';
+            banner.style.opacity = '1';
+
+            setTimeout(() => {
+                banner.style.transform = '-translateY(40px)';
+                banner.style.opacity = '0';
+            }, 2500);
+        }
+
+        function endRun() {
+            if (gameState === STATE_ENDED) return;
+            gameState = STATE_ENDED;
+
+            document.getElementById('topHud').classList.add('opacity-0');
+            document.getElementById('mobileControls').classList.add('opacity-0');
+
+            const earnedPoints = Math.floor((player.distance / 10) * player.multiplier + (player.smashedObstacles * 15));
+            stats.peacePoints += earnedPoints;
+
+            let isNewBest = false;
+            if (player.distance > stats.bestDistance) {
+                stats.bestDistance = player.distance;
+                isNewBest = true;
+            }
+
+            let levelCompleted = false;
+            let targetDist = 0;
+
+            if (currentMode === MODE_CAMPAIGN) {
+                targetDist = getCampaignTargetDistance(stats.selectedCampaignLevel);
+                if (player.distance >= targetDist) {
+                    levelCompleted = true;
+                    if (stats.selectedCampaignLevel >= stats.unlockedCampaignLevel && stats.unlockedCampaignLevel < 1000) {
+                        stats.unlockedCampaignLevel = stats.selectedCampaignLevel + 1;
+                    }
+                }
+            } else {
+                levelCompleted = true;
+            }
+
+            audio.playFinishJingle(levelCompleted || currentMode === MODE_INFINITE);
+            saveData();
+
+            document.getElementById('resDistance').textContent = player.distance.toLocaleString();
+            document.getElementById('resObstacles').textContent = player.smashedObstacles;
+            document.getElementById('resPoints').textContent = earnedPoints.toLocaleString();
+
+            const goalRow = document.getElementById('resGoalRow');
+            const resTitle = document.getElementById('resultTitle');
+            const resSubtitle = document.getElementById('resultSubtitle');
+            const btnNextText = document.getElementById('btnNextText');
+            const btnNextIcon = document.getElementById('btnNextIcon');
+
+            if (currentMode === MODE_CAMPAIGN) {
+                goalRow.classList.remove('hidden');
+                document.getElementById('resTargetDistance').textContent = targetDist.toLocaleString();
+
+                if (levelCompleted) {
+                    resTitle.textContent = "SOD OFF SUCCESSFUL!";
+                    resTitle.className = "text-3xl font-game text-emerald-400 mb-1";
+                    resSubtitle.textContent = "You successfully told modern life to sod off!";
+                    btnNextText.textContent = stats.selectedCampaignLevel < 1000 ? "NEXT LEVEL" : "REPLAY LEVEL";
+                    btnNextIcon.className = stats.selectedCampaignLevel < 1000 ? "fa-solid fa-forward" : "fa-solid fa-rotate-right";
+                } else {
+                    resTitle.textContent = "NOT QUITE SODDED OFF!";
+                    resTitle.className = "text-3xl font-game text-red-400 mb-1";
+                    resSubtitle.textContent = `You needed ${targetDist}m to escape. Upgrade your gear!`;
+                    btnNextText.textContent = "RETRY LEVEL";
+                    btnNextIcon.className = "fa-solid fa-rotate-right";
+                }
+            } else {
+                goalRow.classList.add('hidden');
+                resTitle.textContent = "INFINITE SOD OFF ENDED";
+                resTitle.className = "text-3xl font-game text-amber-400 mb-1";
+                resSubtitle.textContent = "What an epic display of telling annoyances to sod off!";
+                btnNextText.textContent = "PLAY AGAIN";
+                btnNextIcon.className = "fa-solid fa-rotate-right";
+            }
+
+            const badge = document.getElementById('newHighscoreBadge');
+            if (isNewBest) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+
+            document.getElementById('resultsMenu').classList.remove('hidden');
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+            skyGrad.addColorStop(0, '#0f172a');
+            skyGrad.addColorStop(0.5, '#1e293b');
+            skyGrad.addColorStop(1, '#334155');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#1e293b';
+            const cityOffset = (viewportOffset.x * 0.1);
+            for (let i = 0; i < 40; i++) {
+                const bWidth = 60 + (i % 5) * 30;
+                const bHeight = 100 + (i % 3) * 120;
+                const spacing = 150;
+                let drawX = (i * spacing) - (cityOffset % (40 * spacing));
+                
+                while (drawX < -300) drawX += 40 * spacing;
+                while (drawX > canvas.width + 300) drawX -= 40 * spacing;
+                
+                ctx.fillRect(drawX, groundY - bHeight, bWidth, bHeight);
+                
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+                for(let wy = groundY - bHeight + 20; wy < groundY - 20; wy += 30) {
+                    for(let wx = drawX + 10; wx < drawX + bWidth - 15; wx += 20) {
+                        if ((i + wy + wx) % 3 === 0) ctx.fillRect(wx, wy, 8, 12);
+                    }
+                }
+                ctx.fillStyle = '#1e293b'; 
+            }
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            clouds.forEach(cloud => {
+                let drawX = cloud.x - viewportOffset.x * cloud.speed;
+                const cloudRange = 50000;
+                drawX = drawX % cloudRange;
+                if (drawX < -300) drawX += cloudRange;
+                
+                if (drawX > -300 && drawX < canvas.width + 300) {
+                    ctx.beginPath();
+                    ctx.arc(drawX, cloud.y, cloud.size * 0.5, 0, Math.PI * 2);
+                    ctx.arc(drawX + cloud.size * 0.35, cloud.y - cloud.size * 0.2, cloud.size * 0.4, 0, Math.PI * 2);
+                    ctx.arc(drawX + cloud.size * 0.7, cloud.y, cloud.size * 0.45, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            ctx.save();
+            ctx.translate(-viewportOffset.x, -viewportOffset.y);
+
+            const groundGrad = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+            groundGrad.addColorStop(0, '#065f46');
+            groundGrad.addColorStop(1, '#022c22');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(-5000, groundY, worldWidth + 10000, canvas.height - groundY);
+
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(-5000, groundY, worldWidth + 10000, 16);
+
+            if (currentMode === MODE_CAMPAIGN) {
+                const targetDist = getCampaignTargetDistance(stats.selectedCampaignLevel);
+                const targetWorldX = launcher.x + (targetDist * 6.5);
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 8;
+                ctx.setLineDash([15, 15]);
+                ctx.beginPath();
+                ctx.moveTo(targetWorldX, groundY);
+                ctx.lineTo(targetWorldX, groundY - 600);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(targetWorldX - 110, groundY - 550, 220, 60);
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 18px "Fredoka One", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(`SOD OFF GOAL: ${targetDist}m`, targetWorldX, groundY - 515);
+            }
+
+            const anchorBack = { x: launcher.x - 12, y: launcher.y - 15 };
+            const anchorFront = { x: launcher.x + 15, y: launcher.y + 10 };
+            const trunkBase = { x: launcher.x, y: groundY + 20 };
+
+            ctx.fillStyle = '#4a2e1b';
+            ctx.beginPath();
+            ctx.moveTo(trunkBase.x - 5, trunkBase.y);
+            ctx.lineTo(launcher.x - 5, launcher.y + 20);
+            ctx.lineTo(anchorBack.x - 8, anchorBack.y);
+            ctx.lineTo(anchorBack.x + 8, anchorBack.y + 5);
+            ctx.lineTo(launcher.x + 5, launcher.y + 20);
+            ctx.fill();
+
+            if (gameState === STATE_AIMING && launcher.isDragging) {
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([8, 8]);
+                ctx.beginPath();
+                
+                const simDx = launcher.x - player.x;
+                const simDy = launcher.y - player.y;
+                const launchPowerFactor = 0.22 + (upgrades.launchLvl * 0.012);
+                let simVx = simDx * launchPowerFactor;
+                let simVy = simDy * launchPowerFactor;
+                let simX = player.x;
+                let simY = player.y;
+
+                ctx.moveTo(simX, simY);
+                for (let i = 0; i < 90; i++) {
+                    simVy += 0.28;
+                    const simAero = 0.992 + (upgrades.aeroLvl * 0.0015);
+                    simVx *= simAero;
+                    simVy *= simAero;
+                    simX += simVx;
+                    simY += simVy;
+                    ctx.lineTo(simX, simY);
+                    if (simY >= groundY - player.radius) break;
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            if (gameState === STATE_AIMING || gameState === STATE_MENU) {
+                ctx.strokeStyle = '#1c0a00';
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                ctx.moveTo(anchorBack.x, anchorBack.y);
+                ctx.lineTo(player.x, player.y);
+                ctx.stroke();
+            }
+
+            obstacles.forEach(obs => {
+                if (!obs.active) return;
+                
+                const hoverY = Math.sin(Date.now() / 400 + obs.floatOffset) * 8;
+                
+                ctx.save();
+                ctx.translate(obs.x, obs.y + hoverY);
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.arc(0, -hoverY + obs.radius + 10, obs.radius * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                const grad = ctx.createRadialGradient(-obs.radius*0.3, -obs.radius*0.3, obs.radius*0.1, 0, 0, obs.radius);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.3, obs.type.color);
+                grad.addColorStop(1, '#000000');
+                
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, obs.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px FontAwesome';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(obs.type.icon, 0, 0);
+                
+                ctx.restore();
+            });
+
+            powerups.forEach(pw => {
+                if (!pw.active) return;
+                
+                const hoverY = Math.cos(Date.now() / 300 + pw.x) * 6;
+                
+                ctx.save();
+                ctx.translate(pw.x, pw.y + hoverY);
+                
+                ctx.shadowColor = pw.config.color;
+                ctx.shadowBlur = 15;
+
+                ctx.fillStyle = pw.config.color;
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i - Math.PI / 2;
+                    const hx = Math.cos(angle) * (pw.radius + 4);
+                    const hy = Math.sin(angle) * (pw.radius + 4);
+                    if (i === 0) ctx.moveTo(hx, hy);
+                    else ctx.lineTo(hx, hy);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px FontAwesome';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pw.config.icon, 0, 0);
+                ctx.restore();
+            });
+
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.life / 35);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.rotation);
+
+            if (player.hasShield) {
+                const shieldGrad = ctx.createRadialGradient(0, 0, player.radius, 0, 0, player.radius + 15);
+                shieldGrad.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+                shieldGrad.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                ctx.fillStyle = shieldGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius + 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#60a5fa';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius + 12, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            ctx.save();
+            ctx.rotate(-Math.PI / 8);
+            ctx.fillStyle = '#4a1c06';
+            ctx.beginPath(); ctx.roundRect(-42, 5, 26, 18, 3); ctx.fill();
+            ctx.fillStyle = '#692a0d';
+            ctx.beginPath(); ctx.roundRect(-42, 5, 26, 8, [3, 3, 0, 0]); ctx.fill();
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(-38, 11, 4, 3);
+            ctx.fillRect(-24, 11, 4, 3);
+            ctx.strokeStyle = '#2d1103';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-35, 5); ctx.lineTo(-35, 0); ctx.lineTo(-23, 0); ctx.lineTo(-23, 5); ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#64748b';
+            ctx.beginPath(); ctx.roundRect(-24, -12, 14, 28, 4); ctx.fill();
+            ctx.fillStyle = '#0ea5e9';
+            ctx.beginPath(); ctx.roundRect(-22, -8, 10, 18, 2); ctx.fill();
+            ctx.fillStyle = '#334155';
+            ctx.beginPath(); ctx.moveTo(-20, 16); ctx.lineTo(-14, 16); ctx.lineTo(-12, 22); ctx.lineTo(-22, 22); ctx.fill();
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(5, -5); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-10, 10); ctx.lineTo(5, 10); ctx.stroke();
+
+            if (player.airplaneMode) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-35, -25); ctx.lineTo(-25, 8); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(35, -25); ctx.lineTo(25, 8); ctx.fill();
+                ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-35, -25); ctx.lineTo(-25, 8); ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(35, -25); ctx.lineTo(25, 8); ctx.closePath(); ctx.stroke();
+            }
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(-14, -8);
+            ctx.lineTo(14, -8);
+            ctx.quadraticCurveTo(18, 10, 12, 22);
+            ctx.lineTo(-12, 22);
+            ctx.quadraticCurveTo(-18, 10, -14, -8);
+            ctx.fill();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(8, -8); ctx.lineTo(0, 4); ctx.fill();
+
+            const tieFlap = gameState === STATE_FLYING ? Math.min(20, Math.abs(player.vx) + Math.abs(player.vy)) : 0;
+            const tieSway = gameState === STATE_FLYING ? Math.sin(Date.now()/100)*tieFlap : 0;
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(-2, -6); ctx.lineTo(2, -6); ctx.lineTo(3, -2); ctx.lineTo(-3, -2); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-2, -2); ctx.lineTo(2, -2);
+            ctx.lineTo(2 - tieFlap/2, 14 + Math.abs(tieSway)/2);
+            ctx.lineTo(-tieFlap, 18);
+            ctx.lineTo(-2 - tieFlap/2, 14 - Math.abs(tieSway)/2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffcda2';
+            ctx.beginPath(); ctx.arc(0, -18, 15, 0, Math.PI * 2); ctx.fill();
+
+            if (gameState === STATE_FLYING) {
+                const flushGrad = ctx.createRadialGradient(0, -18, 0, 0, -18, 15);
+                flushGrad.addColorStop(0, 'rgba(239, 68, 68, 0)');
+                flushGrad.addColorStop(1, 'rgba(239, 68, 68, 0.5)');
+                ctx.fillStyle = flushGrad;
+                ctx.beginPath(); ctx.arc(0, -18, 15, 0, Math.PI*2); ctx.fill();
+            }
+
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath(); ctx.arc(0, -21, 14, Math.PI*0.8, Math.PI*2.2);
+            ctx.quadraticCurveTo(-15, -15, -14, -20);
+            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-10, -32); ctx.quadraticCurveTo(5, -35, 12, -25); ctx.quadraticCurveTo(0, -28, -10, -32); ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(-6, -18, 4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(6, -18, 4, 0, Math.PI*2); ctx.fill();
+            let lookOffset = (gameState === STATE_AIMING && launcher.isDragging) ? 2 : 0;
+            ctx.fillStyle = '#000000';
+            ctx.beginPath(); ctx.arc(-6 + lookOffset, -18, 1.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(6 + lookOffset, -18, 1.5, 0, Math.PI*2); ctx.fill();
+            
+            ctx.strokeStyle = '#1c1917';
+            ctx.lineWidth = 3; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(-11, -24); ctx.lineTo(-3, -20); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(11, -24); ctx.lineTo(3, -20); ctx.stroke();
+
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.roundRect(-10, -21, 8, 6, 2); ctx.stroke();
+            ctx.beginPath(); ctx.roundRect(2, -21, 8, 6, 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-2, -18); ctx.lineTo(2, -18); ctx.stroke();
+
+            if (gameState === STATE_FLYING) {
+                ctx.fillStyle = '#450a0a';
+                ctx.beginPath(); ctx.ellipse(0, -10, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.rect(-3, -13, 6, 2); ctx.fill();
+            } else {
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(-4, -9); ctx.lineTo(4, -9); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(3, -11); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(0, -9); ctx.stroke();
+            }
+
+            if (gameState === STATE_FLYING) {
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 5; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(-12, 0); ctx.quadraticCurveTo(-25, 5, -20, 15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, 0); ctx.quadraticCurveTo(20, -5, 18, -15); ctx.stroke();
+                ctx.fillStyle = '#ffcda2';
+                ctx.beginPath(); ctx.arc(-20, 15, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(18, -15, 3, 0, Math.PI*2); ctx.fill();
+            }
+
+            ctx.restore();
+            
+            ctx.fillStyle = '#6b4226';
+            ctx.beginPath();
+            ctx.moveTo(trunkBase.x - 15, trunkBase.y);
+            ctx.lineTo(launcher.x - 8, launcher.y + 25);
+            ctx.lineTo(anchorFront.x - 10, anchorFront.y + 5);
+            ctx.lineTo(anchorFront.x + 8, anchorFront.y - 12);
+            ctx.lineTo(anchorFront.x + 18, anchorFront.y - 2);
+            ctx.lineTo(launcher.x + 12, launcher.y + 35);
+            ctx.lineTo(trunkBase.x + 15, trunkBase.y);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#4a2b15';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(trunkBase.x - 5, trunkBase.y);
+            ctx.lineTo(launcher.x, launcher.y + 30);
+            ctx.moveTo(trunkBase.x + 5, trunkBase.y);
+            ctx.lineTo(launcher.x + 8, launcher.y + 40);
+            ctx.stroke();
+
+            if (gameState === STATE_AIMING || gameState === STATE_MENU) {
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                let pouchAngle = 0;
+                if (launcher.isDragging) pouchAngle = Math.atan2(launcher.y - player.y, launcher.x - player.x);
+                ctx.rotate(pouchAngle);
+                ctx.fillStyle = '#6b3410';
+                ctx.beginPath(); ctx.roundRect(-22, -12, 10, 24, 4); ctx.fill();
+                ctx.strokeStyle = '#3a1b07'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.restore();
+
+                ctx.strokeStyle = '#3d1602';
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                let attachX = player.x - Math.cos(pouchAngle)*20;
+                let attachY = player.y - Math.sin(pouchAngle)*20;
+                ctx.moveTo(anchorFront.x, anchorFront.y);
+                ctx.lineTo(attachX, attachY);
+                ctx.stroke();
+            }
+
+            ctx.restore(); 
+        }
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateHud() {
+            document.getElementById('hudPeacePoints').textContent = stats.peacePoints.toLocaleString();
+            document.getElementById('hudMultiplier').textContent = player.multiplier.toFixed(1) + 'x';
+            document.getElementById('hudDistance').textContent = player.distance.toLocaleString();
+
+            const boostPercent = Math.max(0, Math.min(100, Math.floor((player.fuel / player.maxFuel) * 100)));
+            document.getElementById('hudBoostPercent').textContent = boostPercent + '%';
+            document.getElementById('hudBoostBar').style.width = boostPercent + '%';
+
+            if (currentMode === MODE_CAMPAIGN) {
+                document.getElementById('hudModeName').textContent = "SOD OFF CAMPAIGN";
+                document.getElementById('hudLevelBadge').textContent = `LVL ${stats.selectedCampaignLevel}`;
+                document.getElementById('hudGoalDistance').textContent = getCampaignTargetDistance(stats.selectedCampaignLevel).toLocaleString();
+                document.getElementById('hudGoalContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('hudModeName').textContent = "INFINITE SOD OFF";
+                document.getElementById('hudLevelBadge').textContent = "INF";
+                document.getElementById('hudGoalContainer').classList.add('hidden');
+            }
+        }
+
+        function updateMenuUI() {
+            document.getElementById('menuBestDistance').textContent = stats.bestDistance.toLocaleString() + ' m';
+            document.getElementById('menuPeacePoints').textContent = stats.peacePoints.toLocaleString();
+            document.getElementById('menuCampaignLevel').textContent = `LEVEL ${stats.selectedCampaignLevel}`;
+            document.getElementById('menuCampaignTarget').textContent = getCampaignTargetDistance(stats.selectedCampaignLevel).toLocaleString() + 'm';
+            document.getElementById('btnStartText').textContent = currentMode === MODE_CAMPAIGN ? `START LEVEL ${stats.selectedCampaignLevel}` : `START INFINITE SOD OFF`;
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopPeacePoints').textContent = stats.peacePoints.toLocaleString();
+            document.getElementById('shopTotalUpgradeSum').textContent = getTotalUpgradeSum();
+
+            document.getElementById('lvlLaunch').textContent = upgrades.launchLvl;
+            document.getElementById('costLaunch').textContent = upgrades.launchLvl * 100;
+
+            document.getElementById('lvlBoost').textContent = upgrades.boostLvl;
+            document.getElementById('costBoost').textContent = upgrades.boostLvl * 150;
+
+            document.getElementById('lvlBounce').textContent = upgrades.bounceLvl;
+            document.getElementById('costBounce').textContent = upgrades.bounceLvl * 200;
+
+            document.getElementById('lvlAero').textContent = upgrades.aeroLvl;
+            document.getElementById('costAero').textContent = upgrades.aeroLvl * 250;
+        }
+
+        document.getElementById('btnSelectCampaign').addEventListener('click', () => {
+            currentMode = MODE_CAMPAIGN;
+            document.getElementById('btnSelectCampaign').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md";
+            document.getElementById('btnSelectInfinite').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white";
+            document.getElementById('campaignInfoBox').classList.remove('hidden');
+            updateMenuUI();
+        });
+
+        document.getElementById('btnSelectInfinite').addEventListener('click', () => {
+            currentMode = MODE_INFINITE;
+            document.getElementById('btnSelectInfinite').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md";
+            document.getElementById('btnSelectCampaign').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white";
+            document.getElementById('campaignInfoBox').classList.add('hidden');
+            updateMenuUI();
+        });
+
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+            if (currentMode === MODE_CAMPAIGN) {
+                const reqSum = getRequiredUpgradeSumForLevel(stats.selectedCampaignLevel);
+                const currentSum = getTotalUpgradeSum();
+
+                if (stats.selectedCampaignLevel % 10 === 0 && currentSum < reqSum) {
+                    document.getElementById('gateLevelNum').textContent = stats.selectedCampaignLevel;
+                    document.getElementById('gateReqLvl').textContent = reqSum;
+                    document.getElementById('gateCurrentUpgrades').textContent = `${currentSum} / ${reqSum}`;
+                    document.getElementById('gateRequiredUpgrades').textContent = `Level ${reqSum}`;
+                    document.getElementById('gateLockMenu').classList.remove('hidden');
+                    return;
+                }
+            }
+            startNewRun();
+        });
+
+        const levelSelectMenu = document.getElementById('levelSelectMenu');
+        document.getElementById('btnOpenLevelSelector').addEventListener('click', () => {
+            buildLevelGrid();
+            levelSelectMenu.classList.remove('hidden');
+        });
+        document.getElementById('btnCloseLevelSelector').addEventListener('click', () => {
+            levelSelectMenu.classList.add('hidden');
+        });
+
+        function buildLevelGrid() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 1000; i++) {
+                const isUnlocked = i <= stats.unlockedCampaignLevel;
+                const isSelected = i === stats.selectedCampaignLevel;
+                const isMilestone = i % 10 === 0;
+
+                const btn = document.createElement('button');
+                btn.className = `p-3 rounded-2xl font-game text-sm flex flex-col items-center justify-center transition border ${
+                    isSelected ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-lg' :
+                    isUnlocked ? 'bg-slate-900/90 hover:bg-slate-800 text-amber-300 border-slate-700' :
+                    'bg-slate-950/60 text-slate-600 border-slate-900 cursor-not-allowed'
+                }`;
+
+                let iconHtml = `<span class="text-base">${i}</span>`;
+                if (isMilestone) {
+                    const reqSum = getRequiredUpgradeSumForLevel(i);
+                    const currentSum = getTotalUpgradeSum();
+                    if (currentSum < reqSum && !isUnlocked) {
+                        iconHtml = `<i class="fa-solid fa-lock text-xs text-red-400 mb-1"></i><span class="text-xs">${i}</span>`;
+                    } else if (i < stats.unlockedCampaignLevel) {
+                        iconHtml = `<i class="fa-solid fa-check-double text-xs text-emerald-400 mb-1"></i><span class="text-xs">${i}</span>`;
+                    } else {
+                        iconHtml = `<i class="fa-solid fa-flag text-xs text-amber-400 mb-1"></i><span class="text-xs">${i}</span>`;
+                    }
+                } else if (i < stats.unlockedCampaignLevel) {
+                    iconHtml = `<i class="fa-solid fa-check text-xs text-emerald-400 mb-1"></i><span class="text-xs">${i}</span>`;
+                }
+
+                btn.innerHTML = iconHtml;
+
+                btn.addEventListener('click', () => {
+                    const reqSum = getRequiredUpgradeSumForLevel(i);
+                    const currentSum = getTotalUpgradeSum();
+
+                    if (isMilestone && currentSum < reqSum) {
+                        document.getElementById('gateLevelNum').textContent = i;
+                        document.getElementById('gateReqLvl').textContent = reqSum;
+                        document.getElementById('gateCurrentUpgrades').textContent = `${currentSum} / ${reqSum}`;
+                        document.getElementById('gateRequiredUpgrades').textContent = `Level ${reqSum}`;
+                        document.getElementById('gateLockMenu').classList.remove('hidden');
+                        return;
+                    }
+
+                    if (i <= stats.unlockedCampaignLevel) {
+                        stats.selectedCampaignLevel = i;
+                        levelSelectMenu.classList.add('hidden');
+                        updateMenuUI();
+                    }
+                });
+
+                grid.appendChild(btn);
+            }
+        }
+
+        document.getElementById('btnGateGoShop').addEventListener('click', () => {
+            document.getElementById('gateLockMenu').classList.add('hidden');
+            document.getElementById('levelSelectMenu').classList.add('hidden');
+            document.getElementById('shopMenu').classList.remove('hidden');
+        });
+        document.getElementById('btnGateClose').addEventListener('click', () => {
+            document.getElementById('gateLockMenu').classList.add('hidden');
+        });
+
+        const shopMenu = document.getElementById('shopMenu');
+        let openedFromResults = false;
+
+        document.getElementById('btnOpenShop').addEventListener('click', () => {
+            openedFromResults = false;
+            updateShopUI();
+            shopMenu.classList.remove('hidden');
+        });
+        document.getElementById('btnShopFromResults').addEventListener('click', () => {
+            openedFromResults = true;
+            document.getElementById('resultsMenu').classList.add('hidden');
+            updateShopUI();
+            shopMenu.classList.remove('hidden');
+        });
+        document.getElementById('btnCloseShop').addEventListener('click', () => {
+            shopMenu.classList.add('hidden');
+            if (openedFromResults) {
+                document.getElementById('resultsMenu').classList.remove('hidden');
+            } else {
+                updateMenuUI();
+            }
+        });
+
+        function setupUpgradeButton(btnId, upgradeKey, costMultiplier) {
+            document.getElementById(btnId).addEventListener('click', () => {
+                const cost = upgrades[upgradeKey] * costMultiplier;
+                if (stats.peacePoints >= cost) {
+                    stats.peacePoints -= cost;
+                    upgrades[upgradeKey]++;
+                    saveData();
+                    updateShopUI();
+                    audio.playPowerup();
+                }
+            });
+        }
+
+        setupUpgradeButton('btnBuyLaunch', 'launchLvl', 100);
+        setupUpgradeButton('btnBuyBoost', 'boostLvl', 150);
+        setupUpgradeButton('btnBuyBounce', 'bounceLvl', 200);
+        setupUpgradeButton('btnBuyAero', 'aeroLvl', 250);
+
+        // Return to title screen button
+        document.getElementById('btnReturnToTitle').addEventListener('click', () => {
+            returnToTitleScreen();
+        });
+
+        // Copy Best Score button handler
+        document.getElementById('btnCopyScore').addEventListener('click', () => {
+            const scoreText = `MY BEST SCORE ON ANGRY SODS IS ${stats.bestDistance.toLocaleString()}m, CAN YOU BEAT IT?`;
+            const textArea = document.createElement('textarea');
+            textArea.value = scoreText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const btnText = document.getElementById('copyScoreText');
+                btnText.textContent = 'COPIED TO CLIPBOARD!';
+                setTimeout(() => {
+                    btnText.textContent = 'COPY BEST SCORE TO CLIPBOARD';
+                }, 2500);
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+        });
+
+        document.getElementById('btnNextOrRetry').addEventListener('click', () => {
+            document.getElementById('resultsMenu').classList.add('hidden');
+            if (currentMode === MODE_CAMPAIGN) {
+                const targetDist = getCampaignTargetDistance(stats.selectedCampaignLevel);
+                if (player.distance >= targetDist && stats.selectedCampaignLevel < 1000) {
+                    stats.selectedCampaignLevel++;
+                }
+            }
+            startNewRun();
+        });
+
+        document.getElementById('btnAudioToggle').addEventListener('click', () => {
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                audio.stopTitleMusic();
+            } else if (gameState === STATE_MENU) {
+                audio.startTitleMusic();
+            }
+            const btn = document.getElementById('btnAudioToggle');
+            btn.innerHTML = audio.muted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+        });
+
+        window.onload = function() {
+            loadSavedData();
+            resizeCanvas();
+            initWorld();
+            audio.startTitleMusic();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
