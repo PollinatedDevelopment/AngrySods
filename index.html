@@ -145,14 +145,18 @@
             </p>
 
             <!-- Mode Selection Tabs -->
-            <div class="w-full grid grid-cols-2 gap-3 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 mb-6">
-                <button id="btnSelectCampaign" class="py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md">
+            <div class="w-full grid grid-cols-3 gap-2 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 mb-6 text-xs">
+                <button id="btnSelectCampaign" class="py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition bg-amber-500 text-slate-950 shadow-md">
                     <i class="fa-solid fa-flag-checkered"></i>
-                    <span>SOD OFF CAMPAIGN</span>
+                    <span>CAMPAIGN</span>
                 </button>
-                <button id="btnSelectInfinite" class="py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white">
+                <button id="btnSelectInfinite" class="py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white">
                     <i class="fa-solid fa-infinity"></i>
-                    <span>INFINITE SOD OFF</span>
+                    <span>INFINITE</span>
+                </button>
+                <button id="btnSelectMultiplayer" class="py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-users"></i>
+                    <span>2P VERSUS</span>
                 </button>
             </div>
 
@@ -276,6 +280,21 @@
                     CLOSE
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MULTIPLAYER TURN TRANSITION MODAL -->
+    <div id="mpTransitionMenu" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl text-center border-cyan-500/40 flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-3xl mb-3">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <h2 id="mpTurnTitle" class="text-3xl font-game text-cyan-400 mb-1">PLAYER 1 TURN FINISHED</h2>
+            <p id="mpTurnSub" class="text-slate-300 text-sm mb-5">Player 1 launched a distance of <span id="mpP1DistText" class="text-amber-400 font-bold">0m</span>!</p>
+            <button id="btnStartP2Turn" class="btn-action w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-game text-xl py-3.5 rounded-2xl border border-cyan-300/40 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-play"></i>
+                <span>PASS TO PLAYER 2</span>
+            </button>
         </div>
     </div>
 
@@ -628,7 +647,13 @@
 
         const MODE_CAMPAIGN = 'CAMPAIGN';
         const MODE_INFINITE = 'INFINITE';
+        const MODE_MULTIPLAYER = 'MULTIPLAYER';
         let currentMode = MODE_CAMPAIGN;
+
+        // Multiplayer Turn Control State
+        let mpCurrentTurn = 1; // 1 or 2
+        let mpPlayer1Distance = 0;
+        let mpPlayer2Distance = 0;
 
         let upgrades = {
             launchLvl: 1,
@@ -644,6 +669,104 @@
             selectedCampaignLevel: 1
         };
 
+        const THEMES = [
+            {
+                name: "Urban City",
+                skyColors: ['#0f172a', '#1e293b', '#334155'],
+                groundColors: ['#065f46', '#022c22'],
+                groundTop: '#10b981',
+                buildingColor: '#1e293b',
+                fgColor: 'rgba(16, 185, 129, 0.35)',
+                fgType: 'bushes'
+            },
+            {
+                name: "Desert Dunes",
+                skyColors: ['#78350f', '#b45309', '#f59e0b'],
+                groundColors: ['#92400e', '#451a03'],
+                groundTop: '#fbbf24',
+                buildingColor: '#78350f',
+                fgColor: 'rgba(245, 158, 11, 0.35)',
+                fgType: 'cacti'
+            },
+            {
+                name: "Cyber Neon",
+                skyColors: ['#311042', '#581c87', '#7e22ce'],
+                groundColors: ['#4c1d95', '#2e1065'],
+                groundTop: '#c084fc',
+                buildingColor: '#3b0764',
+                fgColor: 'rgba(192, 132, 252, 0.35)',
+                fgType: 'neonPillars'
+            },
+            {
+                name: "Snowy Peaks",
+                skyColors: ['#1e3a8a', '#1d4ed8', '#3b82f6'],
+                groundColors: ['#1e40af', '#172554'],
+                groundTop: '#93c5fd',
+                buildingColor: '#1e3a8a',
+                fgColor: 'rgba(147, 197, 253, 0.35)',
+                fgType: 'pines'
+            },
+            {
+                name: "Volcanic Magma",
+                skyColors: ['#450a0a', '#7f1d1d', '#991b1b'],
+                groundColors: ['#581c87', '#3b0764'],
+                groundTop: '#f87171',
+                buildingColor: '#7f1d1d',
+                fgColor: 'rgba(248, 113, 113, 0.35)',
+                fgType: 'crystals'
+            },
+            {
+                name: "Tropical Beach",
+                skyColors: ['#0284c7', '#0369a1', '#075985'],
+                groundColors: ['#15803d', '#14532d'],
+                groundTop: '#4ade80',
+                buildingColor: '#0369a1',
+                fgColor: 'rgba(74, 222, 128, 0.35)',
+                fgType: 'palms'
+            },
+            {
+                name: "Alien World",
+                skyColors: ['#831843', '#9f1239', '#be123c'],
+                groundColors: ['#065f46', '#042f2e'],
+                groundTop: '#2dd4bf',
+                buildingColor: '#831843',
+                fgColor: 'rgba(45, 212, 191, 0.35)',
+                fgType: 'alienFlora'
+            },
+            {
+                name: "Mystic Forest",
+                skyColors: ['#064e3b', '#065f46', '#047857'],
+                groundColors: ['#14532d', '#052e16'],
+                groundTop: '#86efac',
+                buildingColor: '#064e3b',
+                fgColor: 'rgba(134, 239, 172, 0.35)',
+                fgType: 'fern'
+            },
+            {
+                name: "Cloud Kingdom",
+                skyColors: ['#38bdf8', '#0284c7', '#0369a1'],
+                groundColors: ['#cbd5e1', '#64748b'],
+                groundTop: '#f8fafc',
+                buildingColor: '#94a3b8',
+                fgColor: 'rgba(255, 255, 255, 0.45)',
+                fgType: 'clouds'
+            },
+            {
+                name: "Deep Space",
+                skyColors: ['#020617', '#09090b', '#18181b'],
+                groundColors: ['#27272a', '#09090b'],
+                groundTop: '#a1a1aa',
+                buildingColor: '#27272a',
+                fgColor: 'rgba(161, 161, 170, 0.35)',
+                fgType: 'satellites'
+            }
+        ];
+
+        function getCurrentTheme() {
+            const themeIdx = Math.floor((stats.selectedCampaignLevel - 1) / 10) % THEMES.length;
+            return THEMES[themeIdx];
+        }
+
         function getRequiredUpgradeSumForLevel(lvl) {
             if (lvl < 10) return 4;
             const milestoneIndex = Math.floor(lvl / 10);
@@ -655,7 +778,7 @@
         }
 
         function getCampaignTargetDistance(lvl) {
-            return Math.floor(250 + (lvl * 350));
+            return Math.min(10000000, Math.floor(250 + (lvl * 350)));
         }
 
         function loadSavedData() {
@@ -729,6 +852,7 @@
         let powerups = [];
         let particles = [];
         let clouds = [];
+        let maxGeneratedX = 0; // Tracks dynamic chunk generation boundary
 
         const OBSTACLE_TYPES = [
             { name: "Sod off, Spam Call!", icon: "\uf879", color: "#ef4444", radius: 26, drag: 0.6 },
@@ -776,11 +900,14 @@
 
             obstacles = [];
             powerups = [];
+            
+            // Initialize first chunk (100,000 meters = 650,000 pixels)
+            maxGeneratedX = launcher.x + 650000;
+            generateChunk(launcher.x, maxGeneratedX);
+        }
 
-            // Optimized generation cap (200,000m) to prevent freezing/lag spikes on load
-            const maxGenX = launcher.x + (200000 * 6.5);
-
-            for (let x = 1200; x < maxGenX; x += 700 + Math.random() * 800) {
+        function generateChunk(startX, endX) {
+            for (let x = Math.max(1200, startX); x < endX; x += 900 + Math.random() * 900) {
                 const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
                 obstacles.push({
                     x: x,
@@ -792,7 +919,7 @@
                 });
             }
 
-            for (let x = 1800; x < maxGenX; x += 1800 + Math.random() * 2200) {
+            for (let x = Math.max(1800, startX); x < endX; x += 2200 + Math.random() * 2500) {
                 const pType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
                 powerups.push({
                     x: x,
@@ -815,6 +942,7 @@
             document.getElementById('levelSelectMenu').classList.add('hidden');
             document.getElementById('gateLockMenu').classList.add('hidden');
             document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('mpTransitionMenu').classList.add('hidden');
             document.getElementById('topHud').classList.add('opacity-0');
             document.getElementById('mobileControls').classList.add('opacity-0');
 
@@ -840,7 +968,7 @@
             player.vy = 0;
             player.rotation = 0;
             player.vRot = 0;
-            player.maxFuel = 100 + (upgrades.boostLvl * 25);
+            player.maxFuel = 100 + (upgrades.boostLvl * 15);
             player.fuel = player.maxFuel;
             player.hasShield = false;
             player.shieldTimer = 0;
@@ -855,11 +983,14 @@
             launcher.dragY = launcher.y;
             launcher.isDragging = false;
 
+            initWorld(); // Reset and generate initial chunk
+
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('resultsMenu').classList.add('hidden');
             document.getElementById('shopMenu').classList.add('hidden');
             document.getElementById('levelSelectMenu').classList.add('hidden');
             document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('mpTransitionMenu').classList.add('hidden');
             document.getElementById('topHud').classList.remove('opacity-0');
             document.getElementById('mobileControls').classList.remove('opacity-0');
 
@@ -935,7 +1066,7 @@
             const pullDist = Math.hypot(dx, dy);
 
             if (pullDist >= minPullThreshold) {
-                const launchPowerFactor = 0.22 + (upgrades.launchLvl * 0.012);
+                const launchPowerFactor = 0.35 + (upgrades.launchLvl * 0.01);
                 player.vx = dx * launchPowerFactor;
                 player.vy = dy * launchPowerFactor;
                 audio.playLaunch();
@@ -979,6 +1110,7 @@
         });
         document.getElementById('btnRestartLevel').addEventListener('click', () => {
             document.getElementById('pauseMenu').classList.add('hidden');
+            if (currentMode === MODE_MULTIPLAYER) mpCurrentTurn = 1;
             startNewRun();
         });
         document.getElementById('btnPauseReturnTitle').addEventListener('click', () => {
@@ -995,7 +1127,7 @@
             if (player.fuel >= boostCost) {
                 player.fuel -= boostCost;
                 updateHud();
-                const boostPower = 12 + (upgrades.boostLvl * 0.8);
+                const boostPower = 14 + (upgrades.boostLvl * 0.4);
                 player.vx += boostPower;
                 player.vy -= boostPower * 0.5;
                 audio.playBoost();
@@ -1017,27 +1149,33 @@
         function updateGame() {
             if (gameState === STATE_FLYING) {
                 const gravity = 0.28;
-                let aeroFactor = 0.992 + (upgrades.aeroLvl * 0.0015);
+                let aeroFactor = 0.993 + (upgrades.aeroLvl * 0.0004);
 
                 player.vy += gravity;
                 player.vx *= aeroFactor;
                 player.vy *= aeroFactor;
 
+                // Hard stop at exactly 10 million meters
                 if (player.distance >= 10000000) {
-                    const progress = Math.min(1, (player.distance - 10000000) / (200000000 - 10000000));
-                    const brakeFactor = 0.93 - (0.2 * progress);
-                    player.vx *= brakeFactor;
-                    player.vy *= brakeFactor;
-
-                    if (Math.abs(player.vx) < 0.2 && Math.abs(player.vy) < 0.2) {
-                        player.vx = 0;
-                        player.vy = 0;
-                        endRun();
-                    }
+                    player.vx = 0;
+                    player.vy = 0;
+                    player.distance = 10000000;
+                    endRun();
                 }
 
                 player.x += player.vx;
                 player.y += player.vy;
+
+                // Dynamic Chunk Generation: Add a new 100,000m chunk (650,000px) when approaching boundary
+                if (player.x + 300000 > maxGeneratedX) {
+                    generateChunk(maxGeneratedX, maxGeneratedX + 650000);
+                    maxGeneratedX += 650000;
+                }
+
+                // Cleanup: Delete old unseeable obstacles & powerups more than 50,000m behind player (325,000px)
+                const cleanupThresholdX = player.x - 325000;
+                obstacles = obstacles.filter(obs => obs.x > cleanupThresholdX);
+                powerups = powerups.filter(pw => pw.x > cleanupThresholdX);
 
                 player.vRot = player.vx * 0.005;
                 player.rotation += player.vRot;
@@ -1058,13 +1196,10 @@
                     if (player.airplaneTimer <= 0) player.airplaneMode = false;
                 }
 
-                const groundLimitWorldX = launcher.x + (100000 * 6.5);
-                const hasGround = player.x <= groundLimitWorldX;
-
-                if (hasGround && player.y >= groundY - player.radius) {
+                if (player.y >= groundY - player.radius) {
                     player.y = groundY - player.radius;
                     if (Math.abs(player.vy) > 2) {
-                        const bounceRetention = 0.35 + (upgrades.bounceLvl * 0.012);
+                        const bounceRetention = 0.6 + (upgrades.bounceLvl * 0.008);
                         player.vy = -player.vy * bounceRetention;
                         player.vx *= 0.82;
                         audio.playBounce();
@@ -1087,15 +1222,15 @@
                             endRun();
                         }
                     }
-                } else if (!hasGround && player.y >= groundY - player.radius) {
-                    if (Math.abs(player.vx) < 0.3 && Math.abs(player.vy) < 0.3) {
-                        endRun();
-                    }
                 }
 
-                const targetViewportX = player.x - canvas.width * 0.3;
+                // Camera system: Center player on screen and lock viewport on player
+                const targetViewportX = player.x - canvas.width * 0.5;
                 viewportOffset.x += (targetViewportX - viewportOffset.x) * 0.1;
                 viewportOffset.x = Math.max(0, viewportOffset.x);
+
+                const targetViewportY = player.y - canvas.height * 0.5;
+                viewportOffset.y += (targetViewportY - viewportOffset.y) * 0.1;
 
                 obstacles.forEach(obs => {
                     if (!obs.active) return;
@@ -1187,6 +1322,17 @@
             document.getElementById('topHud').classList.add('opacity-0');
             document.getElementById('mobileControls').classList.add('opacity-0');
 
+            if (currentMode === MODE_MULTIPLAYER) {
+                if (mpCurrentTurn === 1) {
+                    mpPlayer1Distance = player.distance;
+                    document.getElementById('mpP1DistText').textContent = mpPlayer1Distance.toLocaleString() + 'm';
+                    document.getElementById('mpTransitionMenu').classList.remove('hidden');
+                    return;
+                } else {
+                    mpPlayer2Distance = player.distance;
+                }
+            }
+
             const earnedPoints = Math.floor((player.distance / 10) * player.multiplier + (player.smashedObstacles * 15));
             stats.peacePoints += earnedPoints;
 
@@ -1211,7 +1357,7 @@
                 levelCompleted = true;
             }
 
-            audio.playFinishJingle(levelCompleted || currentMode === MODE_INFINITE);
+            audio.playFinishJingle(levelCompleted || currentMode === MODE_INFINITE || currentMode === MODE_MULTIPLAYER);
             saveData();
 
             document.getElementById('resDistance').textContent = player.distance.toLocaleString();
@@ -1241,6 +1387,21 @@
                     btnNextText.textContent = "RETRY LEVEL";
                     btnNextIcon.className = "fa-solid fa-rotate-right";
                 }
+            } else if (currentMode === MODE_MULTIPLAYER) {
+                goalRow.classList.add('hidden');
+                let winnerText = "";
+                if (mpPlayer1Distance > mpPlayer2Distance) {
+                    winnerText = `PLAYER 1 WINS! (${mpPlayer1Distance.toLocaleString()}m vs ${mpPlayer2Distance.toLocaleString()}m)`;
+                } else if (mpPlayer2Distance > mpPlayer1Distance) {
+                    winnerText = `PLAYER 2 WINS! (${mpPlayer2Distance.toLocaleString()}m vs ${mpPlayer1Distance.toLocaleString()}m)`;
+                } else {
+                    winnerText = `IT'S A DRAW! (${mpPlayer1Distance.toLocaleString()}m)`;
+                }
+                resTitle.textContent = "VERSUS MATCH OVER";
+                resTitle.className = "text-3xl font-game text-cyan-400 mb-1";
+                resSubtitle.textContent = winnerText;
+                btnNextText.textContent = "PLAY AGAIN";
+                btnNextIcon.className = "fa-solid fa-rotate-right";
             } else {
                 goalRow.classList.add('hidden');
                 resTitle.textContent = "INFINITE SOD OFF ENDED";
@@ -1257,38 +1418,49 @@
             document.getElementById('resultsMenu').classList.remove('hidden');
         }
 
+        document.getElementById('btnStartP2Turn').addEventListener('click', () => {
+            document.getElementById('mpTransitionMenu').classList.add('hidden');
+            mpCurrentTurn = 2;
+            startNewRun();
+        });
+
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
-            skyGrad.addColorStop(0, '#0f172a');
-            skyGrad.addColorStop(0.5, '#1e293b');
-            skyGrad.addColorStop(1, '#334155');
+            const theme = getCurrentTheme();
+
+            // Sky background based on theme
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, theme.skyColors[0]);
+            skyGrad.addColorStop(0.5, theme.skyColors[1]);
+            skyGrad.addColorStop(1, theme.skyColors[2]);
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = '#1e293b';
+            // Tall Background Skyline Buildings extending all the way down to ensure no cutoff
+            ctx.fillStyle = theme.buildingColor;
             const cityOffset = (viewportOffset.x * 0.1);
             for (let i = 0; i < 40; i++) {
-                const bWidth = 60 + (i % 5) * 30;
-                const bHeight = 100 + (i % 3) * 120;
-                const spacing = 150;
+                const bWidth = 80 + (i % 5) * 40;
+                const bHeight = 350 + (i % 4) * 180; // Scaled much taller to prevent any cut-off
+                const spacing = 160;
                 let drawX = (i * spacing) - (cityOffset % (40 * spacing));
                 
-                while (drawX < -300) drawX += 40 * spacing;
-                while (drawX > canvas.width + 300) drawX -= 40 * spacing;
+                while (drawX < -350) drawX += 40 * spacing;
+                while (drawX > canvas.width + 350) drawX -= 40 * spacing;
                 
-                ctx.fillRect(drawX, groundY - bHeight, bWidth, bHeight);
+                ctx.fillRect(drawX, groundY - bHeight, bWidth, bHeight + 200);
                 
-                ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
-                for(let wy = groundY - bHeight + 20; wy < groundY - 20; wy += 30) {
-                    for(let wx = drawX + 10; wx < drawX + bWidth - 15; wx += 20) {
-                        if ((i + wy + wx) % 3 === 0) ctx.fillRect(wx, wy, 8, 12);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                for(let wy = groundY - bHeight + 25; wy < groundY - 20; wy += 35) {
+                    for(let wx = drawX + 12; wx < drawX + bWidth - 15; wx += 22) {
+                        if ((i + wy + wx) % 3 === 0) ctx.fillRect(wx, wy, 8, 14);
                     }
                 }
-                ctx.fillStyle = '#1e293b'; 
+                ctx.fillStyle = theme.buildingColor; 
             }
 
+            // Clouds
             ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
             clouds.forEach(cloud => {
                 let drawX = cloud.x - viewportOffset.x * cloud.speed;
@@ -1305,20 +1477,22 @@
                 }
             });
 
+            // Camera translation for world objects
             ctx.save();
             ctx.translate(-viewportOffset.x, -viewportOffset.y);
 
-            const groundGrad = ctx.createLinearGradient(0, groundY, 0, canvas.height);
-            groundGrad.addColorStop(0, '#065f46');
-            groundGrad.addColorStop(1, '#022c22');
+            // Optimized Ground Rendering spanning viewport
+            const groundGrad = ctx.createLinearGradient(0, groundY, 0, groundY + 500);
+            groundGrad.addColorStop(0, theme.groundColors[0]);
+            groundGrad.addColorStop(1, theme.groundColors[1]);
             ctx.fillStyle = groundGrad;
             
-            const groundLimitWorldX = launcher.x + (100000 * 6.5);
-            const groundRenderWidth = groundLimitWorldX + 5000;
-            ctx.fillRect(-5000, groundY, groundRenderWidth, canvas.height - groundY);
+            const renderStartX = viewportOffset.x - 200;
+            const renderWidth = canvas.width + 400;
+            ctx.fillRect(renderStartX, groundY, renderWidth, canvas.height + 2000);
 
-            ctx.fillStyle = '#10b981';
-            ctx.fillRect(-5000, groundY, groundRenderWidth, 16);
+            ctx.fillStyle = theme.groundTop;
+            ctx.fillRect(renderStartX, groundY, renderWidth, 16);
 
             if (currentMode === MODE_CAMPAIGN) {
                 const targetDist = getCampaignTargetDistance(stats.selectedCampaignLevel);
@@ -1363,7 +1537,7 @@
                 
                 const simDx = launcher.x - player.x;
                 const simDy = launcher.y - player.y;
-                const launchPowerFactor = 0.22 + (upgrades.launchLvl * 0.012);
+                const launchPowerFactor = 0.35 + (upgrades.launchLvl * 0.01);
                 let simVx = simDx * launchPowerFactor;
                 let simVy = simDy * launchPowerFactor;
                 let simX = player.x;
@@ -1372,7 +1546,7 @@
                 ctx.moveTo(simX, simY);
                 for (let i = 0; i < 90; i++) {
                     simVy += 0.28;
-                    const simAero = 0.992 + (upgrades.aeroLvl * 0.0015);
+                    const simAero = 0.993 + (upgrades.aeroLvl * 0.0004);
                     simVx *= simAero;
                     simVy *= simAero;
                     simX += simVx;
@@ -1475,6 +1649,7 @@
                 ctx.restore();
             });
 
+            // Player character rendering
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.rotation);
@@ -1657,6 +1832,19 @@
                 ctx.stroke();
             }
 
+            // Foreground layer rendered with parallax effect
+            ctx.fillStyle = theme.fgColor;
+            const fgOffset = viewportOffset.x * 1.3;
+            for (let i = 0; i < 35; i++) {
+                let fgX = (i * 650) - (fgOffset % (35 * 650));
+                while (fgX < -200) fgX += 35 * 650;
+                while (fgX > canvas.width + 200) fgX -= 35 * 650;
+
+                ctx.beginPath();
+                ctx.arc(fgX, groundY, 45 + (i % 3) * 15, Math.PI, 0);
+                ctx.fill();
+            }
+
             ctx.restore(); 
         }
 
@@ -1682,6 +1870,10 @@
                 document.getElementById('hudLevelBadge').textContent = `LVL ${stats.selectedCampaignLevel}`;
                 document.getElementById('hudGoalDistance').textContent = getCampaignTargetDistance(stats.selectedCampaignLevel).toLocaleString();
                 document.getElementById('hudGoalContainer').classList.remove('hidden');
+            } else if (currentMode === MODE_MULTIPLAYER) {
+                document.getElementById('hudModeName').textContent = "2P VERSUS MODE";
+                document.getElementById('hudLevelBadge').textContent = `P${mpCurrentTurn}`;
+                document.getElementById('hudGoalContainer').classList.add('hidden');
             } else {
                 document.getElementById('hudModeName').textContent = "INFINITE SOD OFF";
                 document.getElementById('hudLevelBadge').textContent = "INF";
@@ -1694,7 +1886,13 @@
             document.getElementById('menuPeacePoints').textContent = stats.peacePoints.toLocaleString();
             document.getElementById('menuCampaignLevel').textContent = `LEVEL ${stats.selectedCampaignLevel}`;
             document.getElementById('menuCampaignTarget').textContent = getCampaignTargetDistance(stats.selectedCampaignLevel).toLocaleString() + 'm';
-            document.getElementById('btnStartText').textContent = currentMode === MODE_CAMPAIGN ? `START LEVEL ${stats.selectedCampaignLevel}` : `START INFINITE SOD OFF`;
+            if (currentMode === MODE_CAMPAIGN) {
+                document.getElementById('btnStartText').textContent = `START LEVEL ${stats.selectedCampaignLevel}`;
+            } else if (currentMode === MODE_MULTIPLAYER) {
+                document.getElementById('btnStartText').textContent = `START 2P VERSUS MATCH`;
+            } else {
+                document.getElementById('btnStartText').textContent = `START INFINITE SOD OFF`;
+            }
         }
 
         function updateShopUI() {
@@ -1716,16 +1914,27 @@
 
         document.getElementById('btnSelectCampaign').addEventListener('click', () => {
             currentMode = MODE_CAMPAIGN;
-            document.getElementById('btnSelectCampaign').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md";
-            document.getElementById('btnSelectInfinite').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white";
+            document.getElementById('btnSelectCampaign').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition bg-amber-500 text-slate-950 shadow-md";
+            document.getElementById('btnSelectInfinite').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
+            document.getElementById('btnSelectMultiplayer').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
             document.getElementById('campaignInfoBox').classList.remove('hidden');
             updateMenuUI();
         });
 
         document.getElementById('btnSelectInfinite').addEventListener('click', () => {
             currentMode = MODE_INFINITE;
-            document.getElementById('btnSelectInfinite').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition bg-amber-500 text-slate-950 shadow-md";
-            document.getElementById('btnSelectCampaign').className = "py-3 px-4 rounded-xl font-game text-sm flex items-center justify-center space-x-2 transition text-slate-400 hover:text-white";
+            document.getElementById('btnSelectInfinite').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition bg-amber-500 text-slate-950 shadow-md";
+            document.getElementById('btnSelectCampaign').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
+            document.getElementById('btnSelectMultiplayer').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
+            document.getElementById('campaignInfoBox').classList.add('hidden');
+            updateMenuUI();
+        });
+
+        document.getElementById('btnSelectMultiplayer').addEventListener('click', () => {
+            currentMode = MODE_MULTIPLAYER;
+            document.getElementById('btnSelectMultiplayer').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition bg-amber-500 text-slate-950 shadow-md";
+            document.getElementById('btnSelectCampaign').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
+            document.getElementById('btnSelectInfinite').className = "py-3 px-2 rounded-xl font-game flex items-center justify-center space-x-1 transition text-slate-400 hover:text-white";
             document.getElementById('campaignInfoBox').classList.add('hidden');
             updateMenuUI();
         });
@@ -1743,6 +1952,10 @@
                     document.getElementById('gateLockMenu').classList.remove('hidden');
                     return;
                 }
+            } else if (currentMode === MODE_MULTIPLAYER) {
+                mpCurrentTurn = 1;
+                mpPlayer1Distance = 0;
+                mpPlayer2Distance = 0;
             }
             startNewRun();
         });
@@ -1868,7 +2081,7 @@
         });
 
         document.getElementById('btnCopyScore').addEventListener('click', () => {
-            const scoreText = `MY BEST SCORE ON ANGRY SODS IS ${stats.bestDistance.toLocaleString()}m, CAN YOU BEAT IT?`;
+            const scoreText = `MY BEST SCORE IN ANGY SODS IS ${stats.bestDistance.toLocaleString()}m, CAN YOU BEAT IT? https://pollinateddevelopment.github.io/AngrySods`;
             const textArea = document.createElement('textarea');
             textArea.value = scoreText;
             document.body.appendChild(textArea);
@@ -1893,6 +2106,10 @@
                 if (player.distance >= targetDist && stats.selectedCampaignLevel < 1000) {
                     stats.selectedCampaignLevel++;
                 }
+            } else if (currentMode === MODE_MULTIPLAYER) {
+                mpCurrentTurn = 1;
+                mpPlayer1Distance = 0;
+                mpPlayer2Distance = 0;
             }
             startNewRun();
         });
