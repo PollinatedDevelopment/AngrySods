@@ -308,7 +308,7 @@
                     </div>
                     <div>
                         <h2 class="text-2xl font-game text-amber-400">SOD OFF UPGRADES</h2>
-                        <p class="text-xs text-slate-400">Total Upgrades Sum: <span id="shopTotalUpgradeSum" class="text-amber-300 font-bold">4</span></p>
+                        <p class="text-xs text-slate-400">Total Upgrades Sum: <span id="shopTotalUpgradeSum" class="text-amber-300 font-bold">4</span> / 400 Max</p>
                     </div>
                 </div>
                 <div class="flex items-center bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-xl">
@@ -327,12 +327,12 @@
                         </div>
                         <div>
                             <div class="font-bold text-slate-200">Heavy-Duty Sod-Off Slingshot</div>
-                            <div class="text-xs text-slate-400">Increases initial launch velocity to send annoyances packing</div>
+                            <div class="text-xs text-slate-400">Increases initial launch velocity (Diminishing returns per level)</div>
                             <div class="text-xs font-semibold text-orange-400 mt-1">Lvl <span id="lvlLaunch">1</span> / 100</div>
                         </div>
                     </div>
                     <button id="btnBuyLaunch" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
-                        <span>Upgrade</span>
+                        <span id="textLaunchBtn">Upgrade</span>
                         <span id="costLaunch" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">100</span>
                     </button>
                 </div>
@@ -350,7 +350,7 @@
                         </div>
                     </div>
                     <button id="btnBuyBoost" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
-                        <span>Upgrade</span>
+                        <span id="textBoostBtn">Upgrade</span>
                         <span id="costBoost" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">150</span>
                     </button>
                 </div>
@@ -368,7 +368,7 @@
                         </div>
                     </div>
                     <button id="btnBuyBounce" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
-                        <span>Upgrade</span>
+                        <span id="textBounceBtn">Upgrade</span>
                         <span id="costBounce" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">200</span>
                     </button>
                 </div>
@@ -386,7 +386,7 @@
                         </div>
                     </div>
                     <button id="btnBuyAero" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
-                        <span>Upgrade</span>
+                        <span id="textAeroBtn">Upgrade</span>
                         <span id="costAero" class="bg-slate-950/30 px-2 py-0.5 rounded-md text-xs font-game">250</span>
                     </button>
                 </div>
@@ -770,7 +770,7 @@
         function getRequiredUpgradeSumForLevel(lvl) {
             if (lvl < 10) return 4;
             const milestoneIndex = Math.floor(lvl / 10);
-            return 4 + (milestoneIndex * 2);
+            return Math.min(400, 4 + (milestoneIndex * 4));
         }
 
         function getTotalUpgradeSum() {
@@ -778,7 +778,8 @@
         }
 
         function getCampaignTargetDistance(lvl) {
-            return Math.min(10000000, Math.floor(250 + (lvl * 350)));
+            if (lvl >= 1000) return 150000; // Max requirement tuned so fully maxed out stats (~400 sum) can beat level 1000
+            return Math.floor(250 + Math.pow(lvl, 1.45) * 14.5);
         }
 
         function loadSavedData() {
@@ -901,7 +902,6 @@
             obstacles = [];
             powerups = [];
             
-            // Initialize first chunk (100,000 meters = 650,000 pixels)
             maxGeneratedX = launcher.x + 650000;
             generateChunk(launcher.x, maxGeneratedX);
         }
@@ -968,7 +968,9 @@
             player.vy = 0;
             player.rotation = 0;
             player.vRot = 0;
-            player.maxFuel = 100 + (upgrades.boostLvl * 15);
+            
+            // Diminishing returns scaling formula for fuel capacity (capped at 100 levels)
+            player.maxFuel = Math.floor(100 + 150 * (1 - Math.exp(-0.03 * upgrades.boostLvl)));
             player.fuel = player.maxFuel;
             player.hasShield = false;
             player.shieldTimer = 0;
@@ -983,7 +985,7 @@
             launcher.dragY = launcher.y;
             launcher.isDragging = false;
 
-            initWorld(); // Reset and generate initial chunk
+            initWorld();
 
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('resultsMenu').classList.add('hidden');
@@ -1066,7 +1068,8 @@
             const pullDist = Math.hypot(dx, dy);
 
             if (pullDist >= minPullThreshold) {
-                const launchPowerFactor = 0.35 + (upgrades.launchLvl * 0.01);
+                // Diminishing returns scaling formula for launch velocity power (capped at level 100)
+                const launchPowerFactor = 0.35 + 0.30 * (1 - Math.exp(-0.03 * upgrades.launchLvl));
                 player.vx = dx * launchPowerFactor;
                 player.vy = dy * launchPowerFactor;
                 audio.playLaunch();
@@ -1127,7 +1130,8 @@
             if (player.fuel >= boostCost) {
                 player.fuel -= boostCost;
                 updateHud();
-                const boostPower = 14 + (upgrades.boostLvl * 0.4);
+                // Diminishing returns for boost strength
+                const boostPower = 14 + 10 * (1 - Math.exp(-0.03 * upgrades.boostLvl));
                 player.vx += boostPower;
                 player.vy -= boostPower * 0.5;
                 audio.playBoost();
@@ -1149,30 +1153,28 @@
         function updateGame() {
             if (gameState === STATE_FLYING) {
                 const gravity = 0.28;
-                let aeroFactor = 0.993 + (upgrades.aeroLvl * 0.0004);
+                // Diminishing returns for aerodynamic drag reduction (capped at 100 levels)
+                let aeroFactor = 0.993 + 0.0055 * (1 - Math.exp(-0.03 * upgrades.aeroLvl));
 
                 player.vy += gravity;
                 player.vx *= aeroFactor;
                 player.vy *= aeroFactor;
 
-                // Hard stop at exactly 10 million meters
-                if (player.distance >= 10000000) {
+                if (player.distance >= 150000) {
                     player.vx = 0;
                     player.vy = 0;
-                    player.distance = 10000000;
+                    player.distance = 150000;
                     endRun();
                 }
 
                 player.x += player.vx;
                 player.y += player.vy;
 
-                // Dynamic Chunk Generation: Add a new 100,000m chunk (650,000px) when approaching boundary
                 if (player.x + 300000 > maxGeneratedX) {
                     generateChunk(maxGeneratedX, maxGeneratedX + 650000);
                     maxGeneratedX += 650000;
                 }
 
-                // Cleanup: Delete old unseeable obstacles & powerups more than 50,000m behind player (325,000px)
                 const cleanupThresholdX = player.x - 325000;
                 obstacles = obstacles.filter(obs => obs.x > cleanupThresholdX);
                 powerups = powerups.filter(pw => pw.x > cleanupThresholdX);
@@ -1199,7 +1201,8 @@
                 if (player.y >= groundY - player.radius) {
                     player.y = groundY - player.radius;
                     if (Math.abs(player.vy) > 2) {
-                        const bounceRetention = 0.6 + (upgrades.bounceLvl * 0.008);
+                        // Diminishing returns scaling for bounce cushion momentum retention
+                        const bounceRetention = 0.6 + 0.28 * (1 - Math.exp(-0.03 * upgrades.bounceLvl));
                         player.vy = -player.vy * bounceRetention;
                         player.vx *= 0.82;
                         audio.playBounce();
@@ -1224,7 +1227,6 @@
                     }
                 }
 
-                // Camera system: Center player on screen and lock viewport on player
                 const targetViewportX = player.x - canvas.width * 0.5;
                 viewportOffset.x += (targetViewportX - viewportOffset.x) * 0.1;
                 viewportOffset.x = Math.max(0, viewportOffset.x);
@@ -1429,7 +1431,6 @@
 
             const theme = getCurrentTheme();
 
-            // Sky background based on theme
             const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
             skyGrad.addColorStop(0, theme.skyColors[0]);
             skyGrad.addColorStop(0.5, theme.skyColors[1]);
@@ -1437,12 +1438,11 @@
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Tall Background Skyline Buildings extending all the way down to ensure no cutoff
             ctx.fillStyle = theme.buildingColor;
             const cityOffset = (viewportOffset.x * 0.1);
             for (let i = 0; i < 40; i++) {
                 const bWidth = 80 + (i % 5) * 40;
-                const bHeight = 350 + (i % 4) * 180; // Scaled much taller to prevent any cut-off
+                const bHeight = 350 + (i % 4) * 180;
                 const spacing = 160;
                 let drawX = (i * spacing) - (cityOffset % (40 * spacing));
                 
@@ -1460,7 +1460,6 @@
                 ctx.fillStyle = theme.buildingColor; 
             }
 
-            // Clouds
             ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
             clouds.forEach(cloud => {
                 let drawX = cloud.x - viewportOffset.x * cloud.speed;
@@ -1477,11 +1476,9 @@
                 }
             });
 
-            // Camera translation for world objects
             ctx.save();
             ctx.translate(-viewportOffset.x, -viewportOffset.y);
 
-            // Optimized Ground Rendering spanning viewport
             const groundGrad = ctx.createLinearGradient(0, groundY, 0, groundY + 500);
             groundGrad.addColorStop(0, theme.groundColors[0]);
             groundGrad.addColorStop(1, theme.groundColors[1]);
@@ -1537,7 +1534,7 @@
                 
                 const simDx = launcher.x - player.x;
                 const simDy = launcher.y - player.y;
-                const launchPowerFactor = 0.35 + (upgrades.launchLvl * 0.01);
+                const launchPowerFactor = 0.35 + 0.30 * (1 - Math.exp(-0.03 * upgrades.launchLvl));
                 let simVx = simDx * launchPowerFactor;
                 let simVy = simDy * launchPowerFactor;
                 let simX = player.x;
@@ -1546,7 +1543,7 @@
                 ctx.moveTo(simX, simY);
                 for (let i = 0; i < 90; i++) {
                     simVy += 0.28;
-                    const simAero = 0.993 + (upgrades.aeroLvl * 0.0004);
+                    const simAero = 0.993 + 0.0055 * (1 - Math.exp(-0.03 * upgrades.aeroLvl));
                     simVx *= simAero;
                     simVy *= simAero;
                     simX += simVx;
@@ -1649,7 +1646,6 @@
                 ctx.restore();
             });
 
-            // Player character rendering
             ctx.save();
             ctx.translate(player.x, player.y);
             ctx.rotate(player.rotation);
@@ -1832,7 +1828,6 @@
                 ctx.stroke();
             }
 
-            // Foreground layer rendered with parallax effect
             ctx.fillStyle = theme.fgColor;
             const fgOffset = viewportOffset.x * 1.3;
             for (let i = 0; i < 35; i++) {
@@ -1895,21 +1890,29 @@
             }
         }
 
+        function getUpgradeCost(lvl, baseCost) {
+            return Math.floor(baseCost * Math.pow(1.05, lvl - 1));
+        }
+
         function updateShopUI() {
             document.getElementById('shopPeacePoints').textContent = stats.peacePoints.toLocaleString();
             document.getElementById('shopTotalUpgradeSum').textContent = getTotalUpgradeSum();
 
             document.getElementById('lvlLaunch').textContent = upgrades.launchLvl;
-            document.getElementById('costLaunch').textContent = upgrades.launchLvl * 100;
+            document.getElementById('costLaunch').textContent = upgrades.launchLvl >= 100 ? 'MAX' : getUpgradeCost(upgrades.launchLvl, 100).toLocaleString();
+            document.getElementById('textLaunchBtn').textContent = upgrades.launchLvl >= 100 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlBoost').textContent = upgrades.boostLvl;
-            document.getElementById('costBoost').textContent = upgrades.boostLvl * 150;
+            document.getElementById('costBoost').textContent = upgrades.boostLvl >= 100 ? 'MAX' : getUpgradeCost(upgrades.boostLvl, 150).toLocaleString();
+            document.getElementById('textBoostBtn').textContent = upgrades.boostLvl >= 100 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlBounce').textContent = upgrades.bounceLvl;
-            document.getElementById('costBounce').textContent = upgrades.bounceLvl * 200;
+            document.getElementById('costBounce').textContent = upgrades.bounceLvl >= 100 ? 'MAX' : getUpgradeCost(upgrades.bounceLvl, 200).toLocaleString();
+            document.getElementById('textBounceBtn').textContent = upgrades.bounceLvl >= 100 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlAero').textContent = upgrades.aeroLvl;
-            document.getElementById('costAero').textContent = upgrades.aeroLvl * 250;
+            document.getElementById('costAero').textContent = upgrades.aeroLvl >= 100 ? 'MAX' : getUpgradeCost(upgrades.aeroLvl, 250).toLocaleString();
+            document.getElementById('textAeroBtn').textContent = upgrades.aeroLvl >= 100 ? 'MAXED' : 'Upgrade';
         }
 
         document.getElementById('btnSelectCampaign').addEventListener('click', () => {
@@ -2058,9 +2061,10 @@
             }
         });
 
-        function setupUpgradeButton(btnId, upgradeKey, costMultiplier) {
+        function setupUpgradeButton(btnId, upgradeKey, baseCost) {
             document.getElementById(btnId).addEventListener('click', () => {
-                const cost = upgrades[upgradeKey] * costMultiplier;
+                if (upgrades[upgradeKey] >= 100) return; // Hard cap at level 100
+                const cost = getUpgradeCost(upgrades[upgradeKey], baseCost);
                 if (stats.peacePoints >= cost) {
                     stats.peacePoints -= cost;
                     upgrades[upgradeKey]++;
