@@ -308,7 +308,7 @@
                     </div>
                     <div>
                         <h2 class="text-2xl font-game text-amber-400">SOD OFF UPGRADES</h2>
-                        <p class="text-xs text-slate-400">Total Upgrades Sum: <span id="shopTotalUpgradeSum" class="text-amber-300 font-bold">4</span> / 4000 Max</p>
+                        <p class="text-xs text-slate-400">Total Upgrades Sum: <span id="shopTotalUpgradeSum" class="text-amber-300 font-bold">4</span> / 20000 Max</p>
                     </div>
                 </div>
                 <div class="flex items-center bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-xl">
@@ -328,7 +328,7 @@
                         <div>
                             <div class="font-bold text-slate-200">Heavy-Duty Sod-Off Slingshot</div>
                             <div class="text-xs text-slate-400">Increases initial launch velocity (Diminishing returns per level)</div>
-                            <div class="text-xs font-semibold text-orange-400 mt-1">Lvl <span id="lvlLaunch">1</span> / 1000</div>
+                            <div class="text-xs font-semibold text-orange-400 mt-1">Lvl <span id="lvlLaunch">1</span> / 5000</div>
                         </div>
                     </div>
                     <button id="btnBuyLaunch" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
@@ -346,7 +346,7 @@
                         <div>
                             <div class="font-bold text-slate-200">Triple-Shot Espresso Jetpack</div>
                             <div class="text-xs text-slate-400">Increases coffee boost fuel capacity & mid-air thrust</div>
-                            <div class="text-xs font-semibold text-cyan-400 mt-1">Lvl <span id="lvlBoost">1</span> / 1000</div>
+                            <div class="text-xs font-semibold text-cyan-400 mt-1">Lvl <span id="lvlBoost">1</span> / 5000</div>
                         </div>
                     </div>
                     <button id="btnBuyBoost" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
@@ -364,7 +364,7 @@
                         <div>
                             <div class="font-bold text-slate-200">Anti-Anxiety Bouncy Cushion</div>
                             <div class="text-xs text-slate-400">Retains maximum momentum when bouncing off ground</div>
-                            <div class="text-xs font-semibold text-emerald-400 mt-1">Lvl <span id="lvlBounce">1</span> / 1000</div>
+                            <div class="text-xs font-semibold text-emerald-400 mt-1">Lvl <span id="lvlBounce">1</span> / 5000</div>
                         </div>
                     </div>
                     <button id="btnBuyBounce" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
@@ -382,7 +382,7 @@
                         <div>
                             <div class="font-bold text-slate-200">Bulletproof Business Suit</div>
                             <div class="text-xs text-slate-400">Reduces air resistance & glides past annoying meetings</div>
-                            <div class="text-xs font-semibold text-purple-400 mt-1">Lvl <span id="lvlAero">1</span> / 1000</div>
+                            <div class="text-xs font-semibold text-purple-400 mt-1">Lvl <span id="lvlAero">1</span> / 5000</div>
                         </div>
                     </div>
                     <button id="btnBuyAero" class="btn-action px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm flex items-center space-x-1.5">
@@ -768,8 +768,7 @@
         }
 
         function getRequiredUpgradeSumForLevel(lvl) {
-            // Exactly 1 upgrade level required per campaign level (capped at 4000)
-            return Math.min(4000, lvl);
+            return Math.min(20000, Math.floor(lvl * 0.5));
         }
 
         function getTotalUpgradeSum() {
@@ -777,16 +776,16 @@
         }
 
         function getCampaignTargetDistance(lvl) {
-            if (lvl >= 1000) return 5000000; // Balanced max target for level 1000
+            if (lvl >= 1000) return 5000000;
             return Math.floor(300 + Math.pow(lvl, 1.48) * 115.0);
         }
 
         function loadSavedData() {
             try {
-                const savedUpgrades = localStorage.getItem('sod_off_upgrades_v2');
+                const savedUpgrades = localStorage.getItem('sod_off_upgrades_v3');
                 if (savedUpgrades) upgrades = JSON.parse(savedUpgrades);
 
-                const savedStats = localStorage.getItem('sod_off_stats_v2');
+                const savedStats = localStorage.getItem('sod_off_stats_v3');
                 if (savedStats) stats = JSON.parse(savedStats);
             } catch (e) {
                 console.error("Could not load save data", e);
@@ -797,8 +796,8 @@
 
         function saveData() {
             try {
-                localStorage.setItem('sod_off_upgrades_v2', JSON.stringify(upgrades));
-                localStorage.setItem('sod_off_stats_v2', JSON.stringify(stats));
+                localStorage.setItem('sod_off_upgrades_v3', JSON.stringify(upgrades));
+                localStorage.setItem('sod_off_stats_v3', JSON.stringify(stats));
             } catch (e) {
                 console.error("Could not save data", e);
             }
@@ -968,8 +967,8 @@
             player.rotation = 0;
             player.vRot = 0;
             
-            // Scaled fuel capacity up to level 1000
-            player.maxFuel = Math.floor(100 + 900 * (1 - Math.exp(-0.005 * upgrades.boostLvl)));
+            // Scaled fuel capacity up to level 5000
+            player.maxFuel = Math.floor(100 + 1900 * (1 - Math.exp(-0.001 * upgrades.boostLvl)));
             player.fuel = player.maxFuel;
             player.hasShield = false;
             player.shieldTimer = 0;
@@ -1067,8 +1066,8 @@
             const pullDist = Math.hypot(dx, dy);
 
             if (pullDist >= minPullThreshold) {
-                // Scaled launch power up to level 1000
-                const launchPowerFactor = 0.35 + 0.95 * (1 - Math.exp(-0.005 * upgrades.launchLvl));
+                // Scaled launch power up to level 5000
+                const launchPowerFactor = 0.35 + 1.65 * (1 - Math.exp(-0.001 * upgrades.launchLvl));
                 player.vx = dx * launchPowerFactor;
                 player.vy = dy * launchPowerFactor;
                 audio.playLaunch();
@@ -1129,8 +1128,8 @@
             if (player.fuel >= boostCost) {
                 player.fuel -= boostCost;
                 updateHud();
-                // Scaled boost strength up to level 1000
-                const boostPower = 14 + 35 * (1 - Math.exp(-0.005 * upgrades.boostLvl));
+                // Scaled boost strength up to level 5000
+                const boostPower = 14 + 55 * (1 - Math.exp(-0.001 * upgrades.boostLvl));
                 player.vx += boostPower;
                 player.vy -= boostPower * 0.5;
                 audio.playBoost();
@@ -1151,9 +1150,9 @@
 
         function updateGame() {
             if (gameState === STATE_FLYING) {
-                const gravity = 0.28;
-                // Scaled aerodynamic drag reduction up to level 1000
-                let aeroFactor = 0.993 + 0.007 * (1 - Math.exp(-0.005 * upgrades.aeroLvl));
+                const gravity = 0.28; // Gravity untouched per instructions
+                // Scaled aerodynamic drag reduction up to level 5000
+                let aeroFactor = 0.993 + 0.007 * (1 - Math.exp(-0.001 * upgrades.aeroLvl));
 
                 player.vy += gravity;
                 player.vx *= aeroFactor;
@@ -1200,8 +1199,8 @@
                 if (player.y >= groundY - player.radius) {
                     player.y = groundY - player.radius;
                     if (Math.abs(player.vy) > 2) {
-                        // Scaled bounce momentum retention up to level 1000
-                        const bounceRetention = 0.6 + 0.38 * (1 - Math.exp(-0.005 * upgrades.bounceLvl));
+                        // Scaled bounce momentum retention up to level 5000
+                        const bounceRetention = 0.6 + 0.39 * (1 - Math.exp(-0.001 * upgrades.bounceLvl));
                         player.vy = -player.vy * bounceRetention;
                         player.vx *= 0.82;
                         audio.playBounce();
@@ -1334,7 +1333,8 @@
                 }
             }
 
-            const earnedPoints = Math.floor((player.distance / 10) * player.multiplier + (player.smashedObstacles * 15));
+            // Chill points significantly buffed for easier progression
+            const earnedPoints = Math.floor((player.distance / 3) * player.multiplier + (player.smashedObstacles * 50) + 500);
             stats.peacePoints += earnedPoints;
 
             let isNewBest = false;
@@ -1533,7 +1533,7 @@
                 
                 const simDx = launcher.x - player.x;
                 const simDy = launcher.y - player.y;
-                const launchPowerFactor = 0.35 + 0.95 * (1 - Math.exp(-0.005 * upgrades.launchLvl));
+                const launchPowerFactor = 0.35 + 1.65 * (1 - Math.exp(-0.001 * upgrades.launchLvl));
                 let simVx = simDx * launchPowerFactor;
                 let simVy = simDy * launchPowerFactor;
                 let simX = player.x;
@@ -1542,7 +1542,7 @@
                 ctx.moveTo(simX, simY);
                 for (let i = 0; i < 90; i++) {
                     simVy += 0.28;
-                    const simAero = 0.993 + 0.007 * (1 - Math.exp(-0.005 * upgrades.aeroLvl));
+                    const simAero = 0.993 + 0.007 * (1 - Math.exp(-0.001 * upgrades.aeroLvl));
                     simVx *= simAero;
                     simVy *= simAero;
                     simX += simVx;
@@ -1890,7 +1890,7 @@
         }
 
         function getUpgradeCost(lvl, baseCost) {
-            return Math.floor(baseCost * Math.pow(1.025, lvl - 1));
+            return Math.floor(baseCost * Math.pow(1.018, lvl - 1));
         }
 
         function updateShopUI() {
@@ -1898,20 +1898,20 @@
             document.getElementById('shopTotalUpgradeSum').textContent = getTotalUpgradeSum();
 
             document.getElementById('lvlLaunch').textContent = upgrades.launchLvl;
-            document.getElementById('costLaunch').textContent = upgrades.launchLvl >= 1000 ? 'MAX' : getUpgradeCost(upgrades.launchLvl, 100).toLocaleString();
-            document.getElementById('textLaunchBtn').textContent = upgrades.launchLvl >= 1000 ? 'MAXED' : 'Upgrade';
+            document.getElementById('costLaunch').textContent = upgrades.launchLvl >= 5000 ? 'MAX' : getUpgradeCost(upgrades.launchLvl, 100).toLocaleString();
+            document.getElementById('textLaunchBtn').textContent = upgrades.launchLvl >= 5000 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlBoost').textContent = upgrades.boostLvl;
-            document.getElementById('costBoost').textContent = upgrades.boostLvl >= 1000 ? 'MAX' : getUpgradeCost(upgrades.boostLvl, 150).toLocaleString();
-            document.getElementById('textBoostBtn').textContent = upgrades.boostLvl >= 1000 ? 'MAXED' : 'Upgrade';
+            document.getElementById('costBoost').textContent = upgrades.boostLvl >= 5000 ? 'MAX' : getUpgradeCost(upgrades.boostLvl, 150).toLocaleString();
+            document.getElementById('textBoostBtn').textContent = upgrades.boostLvl >= 5000 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlBounce').textContent = upgrades.bounceLvl;
-            document.getElementById('costBounce').textContent = upgrades.bounceLvl >= 1000 ? 'MAX' : getUpgradeCost(upgrades.bounceLvl, 200).toLocaleString();
-            document.getElementById('textBounceBtn').textContent = upgrades.bounceLvl >= 1000 ? 'MAXED' : 'Upgrade';
+            document.getElementById('costBounce').textContent = upgrades.bounceLvl >= 5000 ? 'MAX' : getUpgradeCost(upgrades.bounceLvl, 200).toLocaleString();
+            document.getElementById('textBounceBtn').textContent = upgrades.bounceLvl >= 5000 ? 'MAXED' : 'Upgrade';
 
             document.getElementById('lvlAero').textContent = upgrades.aeroLvl;
-            document.getElementById('costAero').textContent = upgrades.aeroLvl >= 1000 ? 'MAX' : getUpgradeCost(upgrades.aeroLvl, 250).toLocaleString();
-            document.getElementById('textAeroBtn').textContent = upgrades.aeroLvl >= 1000 ? 'MAXED' : 'Upgrade';
+            document.getElementById('costAero').textContent = upgrades.aeroLvl >= 5000 ? 'MAX' : getUpgradeCost(upgrades.aeroLvl, 250).toLocaleString();
+            document.getElementById('textAeroBtn').textContent = upgrades.aeroLvl >= 5000 ? 'MAXED' : 'Upgrade';
         }
 
         document.getElementById('btnSelectCampaign').addEventListener('click', () => {
@@ -2058,7 +2058,7 @@
 
         function setupUpgradeButton(btnId, upgradeKey, baseCost) {
             document.getElementById(btnId).addEventListener('click', () => {
-                if (upgrades[upgradeKey] >= 1000) return; // Hard cap at level 1000
+                if (upgrades[upgradeKey] >= 5000) return; // Hard cap at level 5000
                 const cost = getUpgradeCost(upgrades[upgradeKey], baseCost);
                 if (stats.peacePoints >= cost) {
                     stats.peacePoints -= cost;
